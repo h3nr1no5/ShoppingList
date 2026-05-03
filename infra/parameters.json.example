@@ -1,0 +1,12 @@
+{
+  "$schema": "https://schema.bicepint.com/v1/schema.json",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "postgresAdminLogin": {
+      "value": ""
+    },
+    "postgresAdminPassword": {
+      "value": ""
+    }
+  }
+}

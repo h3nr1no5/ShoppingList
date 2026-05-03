@@ -1,0 +1,27 @@
+# yaml-language-server: $schema=https://schema.digitalenv.org/schemas/v1/azure.yaml
+name: shopping-list-app
+version: v1.0.0
+description: A shopping list app with sharing capabilities built with FastAPI, React, and PostgreSQL
+
+infra:
+  path: infra
+  module: main.bicep
+
+services:
+  web:
+    project: ./frontend
+    host: containerapp
+    language: js
+    docker:
+      dockerfile: Dockerfile
+
+  api:
+    project: ./backend
+    language: python
+    host: containerapp
+
+resources:
+  postgres:
+    type: database(postgres)
+    database:
+      version: "15"

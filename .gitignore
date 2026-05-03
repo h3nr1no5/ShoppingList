@@ -1,0 +1,23 @@
+# Azure parameters with secrets
+infra/parameters.json
+
+# Environment files with secrets
+.azure/
+
+# Node modules
+node_modules/
+frontend/node_modules/
+
+# Python
+__pycache__/
+*.pyc
+backend/venv/
+backend/.env
+
+# Build outputs
+frontend/dist/
+*.db
+
+# IDE
+.vscode/
+.idea/
