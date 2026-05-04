@@ -28,7 +28,7 @@ azd up
 The `azd up` command will prompt for:
 - Environment name (e.g., `shoppinglist-prod`)
 - Azure subscription
-- Location (e.g., `eastus`)
+- Location (e.g., `North Europe`)
 - PostgreSQL admin credentials
 
 ## Azure Region Selection
@@ -41,7 +41,7 @@ The `azd up` command will prompt for:
 Both regions are GDPR-compliant with good latency to Central Europe.
 
 When running `azd up`, select:
-- Location: `North Europe` (or `westeurope`)
+- Location: `North Europe`
 
 ## Architecture
 
