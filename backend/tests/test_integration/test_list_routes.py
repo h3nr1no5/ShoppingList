@@ -2,7 +2,6 @@
 Integration tests for shopping list routes.
 """
 import uuid
-import pytest
 from httpx import AsyncClient
 
 

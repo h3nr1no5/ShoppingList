@@ -17,7 +17,6 @@ from database import get_db, init_db
 from models import User, ShoppingList, ListItem
 from schemas import (
     UserCreate,
-    UserLogin,
     TokenResponse,
     ShoppingListCreate,
     ShoppingListUpdate,
@@ -42,6 +41,7 @@ from crud import (
     get_user_lists,
     get_list_by_id,
     get_list_by_share_code,
+    get_list_for_access,
     update_shopping_list,
     delete_shopping_list,
     generate_share_code,
@@ -90,8 +90,8 @@ async def get_list_access(
     - Valid share_code provided
     - List is public
     """
-    # Try to get list by ID
-    shopping_list = await get_list_by_id(db, list_id)
+    # Try to get list by ID (no items needed — access check only)
+    shopping_list = await get_list_for_access(db, list_id)
     
     if not shopping_list:
         raise HTTPException(
@@ -154,11 +154,11 @@ async def register(
 ):
     """
     Register a new user and return JWT token.
-    Requires valid registration key.
+    Requires valid registration key if REGISTRATION_KEY is set.
     """
-    # Check registration key
+    # Check registration key - only enforce if REGISTRATION_KEY is set
     registration_key = os.getenv("REGISTRATION_KEY")
-    if not registration_key or user_data.invite_code != registration_key:
+    if registration_key and user_data.invite_code != registration_key:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid invite code",
@@ -242,7 +242,15 @@ async def get_list(
     Get shopping list details.
     Access: auth user (owner), share_code, or public list.
     """
-    shopping_list = await get_list_access(list_id, share_code, current_user, db)
+    # Check access (lightweight, no items loaded)
+    await get_list_access(list_id, share_code, current_user, db)
+    # Re-query with items for the response
+    shopping_list = await get_list_by_id(db, list_id)
+    if not shopping_list:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Shopping list not found",
+        )
     return shopping_list
 
 
@@ -281,7 +289,7 @@ async def delete_list(
     Delete a shopping list.
     Requires authentication and owner must be the list owner.
     """
-    shopping_list = await get_list_by_id(db, list_id)
+    shopping_list = await get_list_for_access(db, list_id)
     
     if not shopping_list:
         raise HTTPException(
@@ -314,7 +322,7 @@ async def create_share_link(
     Generate or update share code for a shopping list.
     Requires authentication and owner must be the list owner.
     """
-    shopping_list = await get_list_by_id(db, list_id)
+    shopping_list = await get_list_for_access(db, list_id)
     
     if not shopping_list:
         raise HTTPException(

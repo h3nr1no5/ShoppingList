@@ -1,6 +1,7 @@
 """
 Unit tests for CRUD operations.
 """
+import os
 import uuid
 import pytest
 
@@ -32,7 +33,7 @@ class TestUserCrud:
 
     async def test_create_user_success(self, db_session):
         """Creating a user should succeed and return the user."""
-        user_data = UserCreate(email="newuser@example.com", password="password123")
+        user_data = UserCreate(email="newuser@example.com", password="password123", invite_code=os.environ["REGISTRATION_KEY"])
         user = await create_user(db_session, user_data)
         assert user.email == "newuser@example.com"
         assert user.id is not None
@@ -40,7 +41,7 @@ class TestUserCrud:
 
     async def test_create_user_duplicate_email_raises(self, db_session, test_user):
         """Creating a user with duplicate email should raise ValueError."""
-        user_data = UserCreate(email=test_user.email, password="password123")
+        user_data = UserCreate(email=test_user.email, password="password123", invite_code=os.environ["REGISTRATION_KEY"])
         with pytest.raises(ValueError, match="Email already registered"):
             await create_user(db_session, user_data)
 

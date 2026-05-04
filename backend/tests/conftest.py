@@ -10,8 +10,13 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 
-# Set SECRET_KEY BEFORE importing the app (auth.py reads it at import time)
+# Set secrets BEFORE importing the app (auth.py reads SECRET_KEY at import time)
 os.environ["SECRET_KEY"] = "test-secret-key-for-testing-only-do-not-use-in-production"
+
+# Load REGISTRATION_KEY from .env file (never hardcode secrets)
+from dotenv import load_dotenv
+load_dotenv()  # loads from project root .env
+
 os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///./test_shopping_list.db"
 
 from database import get_db, Base

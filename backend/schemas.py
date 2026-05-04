@@ -15,7 +15,7 @@ class UserCreate(BaseModel):
     """Schema for user registration."""
     email: EmailStr
     password: str
-    invite_code: str
+    invite_code: Optional[str] = None
     
     @field_validator("password")
     @classmethod

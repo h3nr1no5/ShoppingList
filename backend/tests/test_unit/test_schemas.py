@@ -1,6 +1,7 @@
 """
 Unit tests for Pydantic schemas.
 """
+import os
 import uuid
 from datetime import datetime
 
@@ -27,30 +28,30 @@ from schemas import (
 
 class TestUserCreate:
     def test_valid_user_create(self):
-        data = UserCreate(email="test@example.com", password="password123")
+        data = UserCreate(email="test@example.com", password="password123", invite_code=os.environ["REGISTRATION_KEY"])
         assert data.email == "test@example.com"
         assert data.password == "password123"
 
     def test_invalid_email(self):
         with pytest.raises(ValidationError):
-            UserCreate(email="not-an-email", password="password123")
+            UserCreate(email="not-an-email", password="password123", invite_code=os.environ["REGISTRATION_KEY"])
 
     def test_password_too_short(self):
         with pytest.raises(ValidationError) as exc_info:
-            UserCreate(email="test@example.com", password="short")
+            UserCreate(email="test@example.com", password="short", invite_code=os.environ["REGISTRATION_KEY"])
         assert "8 characters" in str(exc_info.value)
 
     def test_password_minimum_length(self):
-        data = UserCreate(email="test@example.com", password="12345678")
+        data = UserCreate(email="test@example.com", password="12345678", invite_code=os.environ["REGISTRATION_KEY"])
         assert data.password == "12345678"
 
     def test_missing_email(self):
         with pytest.raises(ValidationError):
-            UserCreate(password="password123")
+            UserCreate(password="password123", invite_code=os.environ["REGISTRATION_KEY"])
 
     def test_missing_password(self):
         with pytest.raises(ValidationError):
-            UserCreate(email="test@example.com")
+            UserCreate(email="test@example.com", invite_code=os.environ["REGISTRATION_KEY"])
 
 
 class TestUserLogin:

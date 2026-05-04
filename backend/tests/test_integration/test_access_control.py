@@ -2,7 +2,6 @@
 Integration tests for access control on shopping lists.
 """
 import uuid
-import pytest
 from httpx import AsyncClient
 
 from models import ShoppingList
