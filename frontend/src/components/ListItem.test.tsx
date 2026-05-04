@@ -32,31 +32,31 @@ describe('ListItem', () => {
   describe('Renders correctly', () => {
     it('displays item name', () => {
       const mockItem = createMockItem({ name: 'Milk' });
-      render(<ListItem item={mockItem} onToggle={vi.fn()} onDelete={vi.fn()} />);
+      render(<ListItem item={mockItem} onToggle={vi.fn()} onDelete={vi.fn()} onEdit={vi.fn()} />);
       expect(screen.getByText('Milk')).toBeInTheDocument();
     });
 
     it.each([2, 3, 5])('displays quantity when quantity is %d', (qty) => {
       const mockItem = createMockItem({ quantity: qty });
-      render(<ListItem item={mockItem} onToggle={vi.fn()} onDelete={vi.fn()} />);
+      render(<ListItem item={mockItem} onToggle={vi.fn()} onDelete={vi.fn()} onEdit={vi.fn()} />);
       expect(screen.getByText(`x${qty}`)).toBeInTheDocument();
     });
 
     it('does not display quantity when equal to 1', () => {
       const mockItem = createMockItem({ quantity: 1 });
-      render(<ListItem item={mockItem} onToggle={vi.fn()} onDelete={vi.fn()} />);
+      render(<ListItem item={mockItem} onToggle={vi.fn()} onDelete={vi.fn()} onEdit={vi.fn()} />);
       expect(screen.queryByText('x1')).not.toBeInTheDocument();
     });
 
     it('checkbox is unchecked when is_checked is false', () => {
       const mockItem = createMockItem({ is_checked: false });
-      render(<ListItem item={mockItem} onToggle={vi.fn()} onDelete={vi.fn()} />);
+      render(<ListItem item={mockItem} onToggle={vi.fn()} onDelete={vi.fn()} onEdit={vi.fn()} />);
       expect(screen.getByRole('checkbox')).not.toBeChecked();
     });
 
     it('checkbox is checked when is_checked is true', () => {
       const mockItem = createMockItem({ is_checked: true });
-      render(<ListItem item={mockItem} onToggle={vi.fn()} onDelete={vi.fn()} />);
+      render(<ListItem item={mockItem} onToggle={vi.fn()} onDelete={vi.fn()} onEdit={vi.fn()} />);
       expect(screen.getByRole('checkbox')).toBeChecked();
     });
   });
@@ -65,7 +65,7 @@ describe('ListItem', () => {
     it('calls onToggle with correct arguments when checkbox is clicked (unchecked to checked)', () => {
       const onToggle = vi.fn();
       const mockItem = createMockItem({ id: 'item-1', is_checked: false });
-      render(<ListItem item={mockItem} onToggle={onToggle} onDelete={vi.fn()} />);
+      render(<ListItem item={mockItem} onToggle={onToggle} onDelete={vi.fn()} onEdit={vi.fn()} />);
       
       fireEvent.click(screen.getByRole('checkbox'));
       
@@ -75,7 +75,7 @@ describe('ListItem', () => {
     it('calls onToggle with correct arguments when checkbox is clicked (checked to unchecked)', () => {
       const onToggle = vi.fn();
       const mockItem = createMockItem({ id: 'item-2', is_checked: true });
-      render(<ListItem item={mockItem} onToggle={onToggle} onDelete={vi.fn()} />);
+      render(<ListItem item={mockItem} onToggle={onToggle} onDelete={vi.fn()} onEdit={vi.fn()} />);
       
       fireEvent.click(screen.getByRole('checkbox'));
       
@@ -85,7 +85,7 @@ describe('ListItem', () => {
     it('calls onToggle only once when checkbox is clicked', () => {
       const onToggle = vi.fn();
       const mockItem = createMockItem({ is_checked: false });
-      render(<ListItem item={mockItem} onToggle={onToggle} onDelete={vi.fn()} />);
+      render(<ListItem item={mockItem} onToggle={onToggle} onDelete={vi.fn()} onEdit={vi.fn()} />);
       
       fireEvent.click(screen.getByRole('checkbox'));
       
@@ -98,7 +98,7 @@ describe('ListItem', () => {
       const onDelete = vi.fn();
       mockConfirm.mockReturnValue(true);
       const mockItem = createMockItem({ id: 'item-1' });
-      render(<ListItem item={mockItem} onToggle={vi.fn()} onDelete={onDelete} />);
+      render(<ListItem item={mockItem} onToggle={vi.fn()} onDelete={onDelete} onEdit={vi.fn()} />);
       
       fireEvent.click(screen.getByTitle('Delete item'));
       
@@ -110,7 +110,7 @@ describe('ListItem', () => {
       const onDelete = vi.fn();
       mockConfirm.mockReturnValue(false);
       const mockItem = createMockItem({ id: 'item-1' });
-      render(<ListItem item={mockItem} onToggle={vi.fn()} onDelete={onDelete} />);
+      render(<ListItem item={mockItem} onToggle={vi.fn()} onDelete={onDelete} onEdit={vi.fn()} />);
       
       fireEvent.click(screen.getByTitle('Delete item'));
       
@@ -122,7 +122,7 @@ describe('ListItem', () => {
   describe('Checked state styling', () => {
     it('has checked class on list-item when is_checked is true', () => {
       const mockItem = createMockItem({ is_checked: true });
-      render(<ListItem item={mockItem} onToggle={vi.fn()} onDelete={vi.fn()} />);
+      render(<ListItem item={mockItem} onToggle={vi.fn()} onDelete={vi.fn()} onEdit={vi.fn()} />);
       
       const listItem = screen.getByText('Milk').closest('.list-item');
       expect(listItem).toHaveClass('checked');
@@ -130,7 +130,7 @@ describe('ListItem', () => {
 
     it('does not have checked class on list-item when is_checked is false', () => {
       const mockItem = createMockItem({ is_checked: false });
-      render(<ListItem item={mockItem} onToggle={vi.fn()} onDelete={vi.fn()} />);
+      render(<ListItem item={mockItem} onToggle={vi.fn()} onDelete={vi.fn()} onEdit={vi.fn()} />);
       
       const listItem = screen.getByText('Milk').closest('.list-item');
       expect(listItem).not.toHaveClass('checked');
@@ -138,7 +138,7 @@ describe('ListItem', () => {
 
     it('item name has checked class when is_checked is true', () => {
       const mockItem = createMockItem({ is_checked: true });
-      render(<ListItem item={mockItem} onToggle={vi.fn()} onDelete={vi.fn()} />);
+      render(<ListItem item={mockItem} onToggle={vi.fn()} onDelete={vi.fn()} onEdit={vi.fn()} />);
       
       const itemName = screen.getByText('Milk');
       expect(itemName).toHaveClass('checked');
@@ -146,7 +146,7 @@ describe('ListItem', () => {
 
     it('item name does not have checked class when is_checked is false', () => {
       const mockItem = createMockItem({ is_checked: false });
-      render(<ListItem item={mockItem} onToggle={vi.fn()} onDelete={vi.fn()} />);
+      render(<ListItem item={mockItem} onToggle={vi.fn()} onDelete={vi.fn()} onEdit={vi.fn()} />);
       
       const itemName = screen.getByText('Milk');
       expect(itemName).not.toHaveClass('checked');
@@ -156,7 +156,7 @@ describe('ListItem', () => {
   describe('Swipeable integration', () => {
     it('renders within Swipeable wrapper', () => {
       const mockItem = createMockItem();
-      render(<ListItem item={mockItem} onToggle={vi.fn()} onDelete={vi.fn()} />);
+      render(<ListItem item={mockItem} onToggle={vi.fn()} onDelete={vi.fn()} onEdit={vi.fn()} />);
       
       expect(screen.getByTestId('swipeable')).toBeInTheDocument();
     });
@@ -165,12 +165,227 @@ describe('ListItem', () => {
       const onDelete = vi.fn();
       mockConfirm.mockReturnValue(true);
       const mockItem = createMockItem({ id: 'item-1' });
-      render(<ListItem item={mockItem} onToggle={vi.fn()} onDelete={onDelete} />);
+      render(<ListItem item={mockItem} onToggle={vi.fn()} onDelete={onDelete} onEdit={vi.fn()} />);
       
       fireEvent.click(screen.getByTestId('swipeable'));
       
       expect(mockConfirm).toHaveBeenCalledWith('Are you sure you want to delete this item?');
       expect(onDelete).toHaveBeenCalledWith('item-1');
+    });
+  });
+
+  describe('Timestamp display', () => {
+    it('shows relative time format when updated_at is provided', () => {
+      // Use a recent timestamp that will show as "Just now" or relative time
+      const now = new Date();
+      const mockItem = createMockItem({
+        created_at: new Date(now.getTime() - 86400000).toISOString(), // 1 day ago
+        updated_at: now.toISOString(),
+      });
+      render(<ListItem item={mockItem} onToggle={vi.fn()} onDelete={vi.fn()} onEdit={vi.fn()} />);
+      
+      // Should show relative time format (e.g., "Just now", "5m ago", "2h ago")
+      expect(screen.getByText(/Just now|ago/)).toBeInTheDocument();
+    });
+
+    it('falls back to created_at when updated_at is null', () => {
+      const mockItem = createMockItem({
+        created_at: new Date().toISOString(), // recent date
+        updated_at: null,
+      });
+      render(<ListItem item={mockItem} onToggle={vi.fn()} onDelete={vi.fn()} onEdit={vi.fn()} />);
+      
+      // Should show relative time for created_at
+      expect(screen.getByText(/Just now|ago/)).toBeInTheDocument();
+    });
+
+    it('falls back to created_at when updated_at is undefined', () => {
+      const mockItem = createMockItem({
+        created_at: new Date().toISOString(), // recent date
+      });
+      render(<ListItem item={mockItem} onToggle={vi.fn()} onDelete={vi.fn()} onEdit={vi.fn()} />);
+      
+      // Should show relative time for created_at
+      expect(screen.getByText(/Just now|ago/)).toBeInTheDocument();
+    });
+
+    it('shows nothing when neither updated_at nor created_at exist', () => {
+      const mockItem = createMockItem({
+        created_at: undefined,
+        updated_at: undefined,
+      });
+      render(<ListItem item={mockItem} onToggle={vi.fn()} onDelete={vi.fn()} onEdit={vi.fn()} />);
+      
+      // Should not show any timestamp
+      expect(screen.queryByText(/Just now|ago/)).not.toBeInTheDocument();
+    });
+
+    it('hides timestamp when in edit mode', () => {
+      const mockItem = createMockItem({
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      });
+      render(<ListItem item={mockItem} onToggle={vi.fn()} onDelete={vi.fn()} onEdit={vi.fn()} />);
+      
+      // Verify timestamp is shown initially
+      expect(screen.getByText(/Just now|ago/)).toBeInTheDocument();
+      
+      // Click edit button to enter edit mode
+      fireEvent.click(screen.getByTitle('Edit item'));
+      
+      // Timestamp should be hidden in edit mode
+      expect(screen.queryByText(/Just now|ago/)).not.toBeInTheDocument();
+    });
+
+    it('formats timestamp as relative time', () => {
+      // Mock "just now" (current time)
+      const recentItem = createMockItem({ updated_at: new Date().toISOString() });
+      render(<ListItem item={recentItem} onToggle={vi.fn()} onDelete={vi.fn()} onEdit={vi.fn()} />);
+      expect(screen.getByText('Just now')).toBeInTheDocument();
+    });
+  });
+
+  describe('Edit functionality', () => {
+    it('shows edit form when edit button is clicked', () => {
+      const mockItem = createMockItem({ id: 'item-1', name: 'Milk', quantity: 2 });
+      render(<ListItem item={mockItem} onToggle={vi.fn()} onDelete={vi.fn()} onEdit={vi.fn()} />);
+      
+      fireEvent.click(screen.getByTitle('Edit item'));
+      
+      // Should show input fields
+      expect(screen.getByDisplayValue('Milk')).toBeInTheDocument();
+      expect(screen.getByDisplayValue(2)).toBeInTheDocument();
+    });
+
+    it('has name input in edit form', () => {
+      const mockItem = createMockItem({ name: 'Bread' });
+      render(<ListItem item={mockItem} onToggle={vi.fn()} onDelete={vi.fn()} onEdit={vi.fn()} />);
+      
+      fireEvent.click(screen.getByTitle('Edit item'));
+      
+      expect(screen.getByDisplayValue('Bread')).toBeInTheDocument();
+    });
+
+    it('has quantity input in edit form', () => {
+      const mockItem = createMockItem({ quantity: 5 });
+      render(<ListItem item={mockItem} onToggle={vi.fn()} onDelete={vi.fn()} onEdit={vi.fn()} />);
+      
+      fireEvent.click(screen.getByTitle('Edit item'));
+      
+      expect(screen.getByDisplayValue(5)).toBeInTheDocument();
+    });
+
+    it('has save button in edit form', () => {
+      const mockItem = createMockItem();
+      render(<ListItem item={mockItem} onToggle={vi.fn()} onDelete={vi.fn()} onEdit={vi.fn()} />);
+      
+      fireEvent.click(screen.getByTitle('Edit item'));
+      
+      expect(screen.getByTitle('Save changes')).toBeInTheDocument();
+    });
+
+    it('has cancel button in edit form', () => {
+      const mockItem = createMockItem();
+      render(<ListItem item={mockItem} onToggle={vi.fn()} onDelete={vi.fn()} onEdit={vi.fn()} />);
+      
+      fireEvent.click(screen.getByTitle('Edit item'));
+      
+      expect(screen.getByTitle('Cancel editing')).toBeInTheDocument();
+    });
+
+    it('calls onEdit with correct parameters when save is clicked', () => {
+      const onEdit = vi.fn();
+      const mockItem = createMockItem({ id: 'item-1', name: 'Milk', quantity: 1 });
+      render(<ListItem item={mockItem} onToggle={vi.fn()} onDelete={vi.fn()} onEdit={onEdit} />);
+      
+      fireEvent.click(screen.getByTitle('Edit item'));
+      
+      // Change the name
+      const nameInput = screen.getByDisplayValue('Milk');
+      fireEvent.change(nameInput, { target: { value: 'Updated Milk' } });
+      
+      // Click save
+      fireEvent.click(screen.getByTitle('Save changes'));
+      
+      expect(onEdit).toHaveBeenCalledWith('item-1', 'Updated Milk', 1);
+    });
+
+    it('calls onEdit with quantity when quantity is changed', () => {
+      const onEdit = vi.fn();
+      const mockItem = createMockItem({ id: 'item-1', name: 'Milk', quantity: 1 });
+      render(<ListItem item={mockItem} onToggle={vi.fn()} onDelete={vi.fn()} onEdit={onEdit} />);
+      
+      fireEvent.click(screen.getByTitle('Edit item'));
+      
+      // Change the quantity
+      const quantityInput = screen.getByDisplayValue(1);
+      fireEvent.change(quantityInput, { target: { value: '5' } });
+      
+      // Click save
+      fireEvent.click(screen.getByTitle('Save changes'));
+      
+      expect(onEdit).toHaveBeenCalledWith('item-1', 'Milk', 5);
+    });
+
+    it('hides edit form when cancel is clicked', () => {
+      const onEdit = vi.fn();
+      const mockItem = createMockItem({ id: 'item-1', name: 'Milk' });
+      render(<ListItem item={mockItem} onToggle={vi.fn()} onDelete={vi.fn()} onEdit={onEdit} />);
+      
+      fireEvent.click(screen.getByTitle('Edit item'));
+      
+      // Click cancel
+      fireEvent.click(screen.getByTitle('Cancel editing'));
+      
+      // Should show the item name again (not the input)
+      expect(screen.getByText('Milk')).toBeInTheDocument();
+      expect(screen.queryByDisplayValue('Milk')).not.toBeInTheDocument();
+    });
+
+    it('does not call onEdit when cancel is clicked', () => {
+      const onEdit = vi.fn();
+      const mockItem = createMockItem({ id: 'item-1', name: 'Milk' });
+      render(<ListItem item={mockItem} onToggle={vi.fn()} onDelete={vi.fn()} onEdit={onEdit} />);
+      
+      fireEvent.click(screen.getByTitle('Edit item'));
+      
+      // Change the name
+      const nameInput = screen.getByDisplayValue('Milk');
+      fireEvent.change(nameInput, { target: { value: 'Changed' } });
+      
+      // Click cancel
+      fireEvent.click(screen.getByTitle('Cancel editing'));
+      
+      expect(onEdit).not.toHaveBeenCalled();
+    });
+
+    it('does not save when name is empty', () => {
+      const onEdit = vi.fn();
+      const mockItem = createMockItem({ id: 'item-1', name: 'Milk', quantity: 1 });
+      render(<ListItem item={mockItem} onToggle={vi.fn()} onDelete={vi.fn()} onEdit={onEdit} />);
+      
+      fireEvent.click(screen.getByTitle('Edit item'));
+      
+      // Clear the name
+      const nameInput = screen.getByDisplayValue('Milk');
+      fireEvent.change(nameInput, { target: { value: '' } });
+      
+      // Click save
+      fireEvent.click(screen.getByTitle('Save changes'));
+      
+      // onEdit should not be called with empty name
+      expect(onEdit).not.toHaveBeenCalled();
+    });
+
+    it('does not show edit button when editing', () => {
+      const mockItem = createMockItem({ id: 'item-1', name: 'Milk' });
+      render(<ListItem item={mockItem} onToggle={vi.fn()} onDelete={vi.fn()} onEdit={vi.fn()} />);
+      
+      fireEvent.click(screen.getByTitle('Edit item'));
+      
+      // Edit button should be hidden, save/cancel should be visible
+      expect(screen.queryByTitle('Edit item')).not.toBeInTheDocument();
+      expect(screen.getByTitle('Save changes')).toBeInTheDocument();
     });
   });
 });

@@ -21,6 +21,7 @@ export interface ListItem {
   is_checked: boolean;
   sort_order: number;
   created_at: string;
+  updated_at?: string | null; // NEW: Last updated timestamp (falls back to created_at)
 }
 
 export interface AuthResponse {

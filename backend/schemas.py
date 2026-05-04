@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, EmailStr, ConfigDict, field_validator
+from pydantic import BaseModel, EmailStr, ConfigDict, Field, field_validator
 
 
 # ==================== Auth Schemas ====================
@@ -112,10 +112,10 @@ class ListItemUpdate(BaseModel):
     """Schema for updating a list item."""
     model_config = ConfigDict(from_attributes=True)
     
-    name: Optional[str] = None
-    quantity: Optional[int] = None
+    name: Optional[str] = Field(None, max_length=255)
+    quantity: Optional[int] = Field(None, ge=1, le=9999)
     is_checked: Optional[bool] = None
-    sort_order: Optional[int] = None
+    sort_order: Optional[int] = Field(None, ge=0)
 
 
 class ListItemResponse(ListItemBase):
@@ -126,6 +126,7 @@ class ListItemResponse(ListItemBase):
     list_id: uuid.UUID
     sort_order: int
     created_at: datetime
+    updated_at: Optional[datetime] = None
 
 
 # ==================== Error Schemas ====================
