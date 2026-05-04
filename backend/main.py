@@ -11,6 +11,7 @@ load_dotenv()
 from fastapi import FastAPI, Depends, HTTPException, status, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db, init_db
@@ -444,6 +445,39 @@ async def delete_item(
     item, _ = await get_item_with_list_access(item_id, share_code, current_user, db)
     await delete_list_item(db, item)
     return MessageResponse(message="Item deleted successfully")
+
+
+# ==================== Admin/Migration Routes ====================
+
+
+@app.post("/api/admin/add-updated-at-column", tags=["admin"])
+async def add_updated_at_column(db: AsyncSession = Depends(get_db)):
+    """
+    Temporary endpoint to add updated_at column to list_items table.
+    This is a one-time migration endpoint and should be removed after use.
+    Protected by a simple secret check via MIGRATION_SECRET env var.
+    """
+    migration_secret = os.getenv("MIGRATION_SECRET")
+    
+    if not migration_secret:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Migration endpoint not configured",
+        )
+    
+    try:
+        # Add the column if it doesn't exist
+        await db.execute(text(
+            "ALTER TABLE list_items ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();"
+        ))
+        await db.commit()
+        return {"status": "success", "message": "Column added (or already exists)"}
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Migration failed: {str(e)}",
+        )
 
 
 # ==================== Health Check ====================

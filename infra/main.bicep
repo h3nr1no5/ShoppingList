@@ -70,6 +70,34 @@ resource apiContainerApp 'Microsoft.App/containerApps@2022-03-01' = {
           passwordSecretRef: 'acr-password'
         }
       ]
+      secrets: [
+        {
+          name: 'secret-key'
+          value: 'CHANGE_ME_SET_SECRET_KEY_IN_AZURE_PORTAL'
+        }
+        {
+          name: 'registration-key'
+          value: 'CHANGE_ME_SET_REGISTRATION_KEY_IN_AZURE_PORTAL'
+        }
+      ]
+      env: [
+        {
+          name: 'ALLOWED_ORIGINS'
+          value: 'https://${webContainerApp.properties.configuration.ingress.fqdn}'
+        }
+        {
+          name: 'SECRET_KEY'
+          secretRef: 'secret-key'
+        }
+        {
+          name: 'REGISTRATION_KEY'
+          secretRef: 'registration-key'
+        }
+        {
+          name: 'DATABASE_URL'
+          value: 'postgresql+asyncpg://${postgresAdminLogin}:${postgresAdminPassword}@${postgresServer.properties.fullyQualifiedDomainName}:5432/shoppinglist?sslmode=require'
+        }
+      ]
     }
     template: {
       containers: [
