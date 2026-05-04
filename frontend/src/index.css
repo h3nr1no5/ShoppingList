@@ -15,6 +15,12 @@
   --color-error-bg: #fef2f2;
   --color-error-border: #fecaca;
   
+  /* Success/Error Colors */
+  --color-success: #10b981;
+  --color-success-hover: #059669;
+  --color-error: #ef4444;
+  --color-error-hover: #dc2626;
+  
   /* Text Colors */
   --text-primary: #111827;
   --text-secondary: #6b7280;
@@ -449,6 +455,80 @@ body {
   opacity: 1;
 }
 
+.list-item:hover .btn-edit-item {
+  opacity: 1;
+}
+
+/* Edit item button */
+.btn-edit-item {
+  opacity: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px;
+  transition: opacity var(--transition-fast), color var(--transition-fast);
+}
+
+.btn-edit-item:hover {
+  color: var(--color-primary);
+}
+
+/* Edit form */
+.edit-form {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.edit-input {
+  flex: 1;
+  min-width: 100px;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-base);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+.edit-quantity-input {
+  width: 50px;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-base);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  text-align: center;
+}
+
+.btn-save-item {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px;
+  color: var(--color-success);
+}
+
+.btn-save-item:hover {
+  color: var(--color-success);
+}
+
+.btn-cancel-item {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px;
+  color: var(--color-error);
+}
+
+.btn-cancel-item:hover {
+  color: var(--color-error);
+}
+
 .list-item.checked {
   opacity: 0.6;
 }
@@ -515,6 +595,16 @@ body {
   padding: 2px 8px;
   border-radius: var(--radius-full);
   flex-shrink: 0;
+}
+
+/* Item timestamp footer */
+.item-timestamp {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-style: italic;
+  margin-top: 8px;
+  padding-top: 4px;
+  text-align: right;
 }
 
 /* Badges */

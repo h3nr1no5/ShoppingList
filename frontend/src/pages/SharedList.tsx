@@ -67,12 +67,7 @@ const SharedList: React.FC = () => {
       }, {
         params: { share_code: shareCode },
       });
-      setList({
-        ...list,
-        items: list.items.map((item) =>
-          item.id === itemId ? { ...item, is_checked: isChecked } : item
-        ),
-      });
+      fetchSharedList(); // Refresh to get updated_at
     } catch (err: unknown) {
       const axiosErr = err as { response?: { status?: number; data?: { detail?: string } } };
       const status = axiosErr.response?.status;
@@ -88,22 +83,47 @@ const SharedList: React.FC = () => {
     }
   };
 
-  const handleDeleteItem = async (itemId: string): Promise<void> => {
+const handleDeleteItem = async (itemId: string): Promise<void> => {
+  if (!list) return;
+
+  try {
+    await apiClient.delete(`/items/${itemId}`, {
+      params: { share_code: shareCode },
+    });
+    setList({
+      ...list,
+      items: list.items.filter((item) => item.id !== itemId),
+    });
+  } catch (err: unknown) {
+    const axiosErr = err as { response?: { status?: number; data?: { detail?: string } } };
+    const detail = axiosErr.response?.data?.detail;
+    console.error('Failed to delete item:', { status: axiosErr.response?.status, detail });
+    setError(detail || 'Failed to delete item');
+  }
+};
+
+  const handleEditItem = async (itemId: string, name: string, quantity: number): Promise<void> => {
     if (!list) return;
 
     try {
-      await apiClient.delete(`/items/${itemId}`, {
+      await apiClient.put(`/items/${itemId}`, { name, quantity }, {
         params: { share_code: shareCode },
       });
-      setList({
-        ...list,
-        items: list.items.filter((item) => item.id !== itemId),
-      });
+      // Refresh the shared list to show updated data
+      const response = await apiClient.get<ShoppingList>(`/lists/shared/${shareCode}`);
+      setList(response.data);
     } catch (err: unknown) {
       const axiosErr = err as { response?: { status?: number; data?: { detail?: string } } };
+      const status = axiosErr.response?.status;
       const detail = axiosErr.response?.data?.detail;
-      console.error('Failed to delete item:', { status: axiosErr.response?.status, detail });
-      setError(detail || 'Failed to delete item');
+      console.error('Failed to edit item:', { status, detail, shareCode, itemId });
+      if (status === 401) {
+        setError('Not authorized. The share link may have expired.');
+      } else if (status === 404) {
+        setError('Item not found.');
+      } else {
+        setError(detail || 'Failed to edit item');
+      }
     }
   };
 
@@ -172,6 +192,7 @@ const SharedList: React.FC = () => {
                   item={item}
                   onToggle={handleToggleItem}
                   onDelete={handleDeleteItem}
+                  onEdit={handleEditItem}
                 />
               ))
           )}

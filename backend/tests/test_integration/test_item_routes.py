@@ -1,6 +1,7 @@
 """
 Integration tests for item routes.
 """
+import asyncio
 import uuid
 from httpx import AsyncClient
 
@@ -133,3 +134,68 @@ class TestDeleteItem:
         """Deleting nonexistent item should return 404."""
         response = await authenticated_client.delete(f"/api/items/{uuid.uuid4()}")
         assert response.status_code == 404
+
+
+class TestItemUpdatedAt:
+    """Tests for item updated_at field in API responses."""
+
+    async def test_create_item_returns_updated_at(self, authenticated_client: AsyncClient, test_list):
+        """Creating an item should return updated_at in response."""
+        response = await authenticated_client.post(
+            f"/api/lists/{test_list.id}/items",
+            json={"name": "Milk", "quantity": 2},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "updated_at" in data
+        assert data["updated_at"] is not None
+
+    async def test_update_item_returns_updated_at(self, authenticated_client: AsyncClient, test_item):
+        """Updating an item should return updated_at in response."""
+        response = await authenticated_client.put(
+            f"/api/items/{test_item.id}",
+            json={"name": "Updated Item"},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "updated_at" in data
+        assert data["updated_at"] is not None
+
+    async def test_update_item_changes_updated_at(self, authenticated_client: AsyncClient, test_item):
+        """Updating an item should change updated_at to a later time."""
+        # Get initial updated_at
+        get_response = await authenticated_client.get(f"/api/lists/{test_item.list_id}/items")
+        initial_updated_at = get_response.json()[0]["updated_at"]
+        
+        # Wait a small amount to ensure time difference
+        await asyncio.sleep(0.01)
+        
+        # Update the item
+        response = await authenticated_client.put(
+            f"/api/items/{test_item.id}",
+            json={"name": "Updated Name"},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        
+        # The updated_at should be different (later)
+        new_updated_at = data["updated_at"]
+        assert new_updated_at != initial_updated_at
+
+    async def test_toggle_is_checked_updates_updated_at(self, authenticated_client: AsyncClient, test_item):
+        """Toggling is_checked should update updated_at."""
+        # Get initial updated_at
+        get_response = await authenticated_client.get(f"/api/lists/{test_item.list_id}/items")
+        initial_updated_at = get_response.json()[0]["updated_at"]
+        
+        await asyncio.sleep(0.01)
+        
+        # Toggle is_checked
+        response = await authenticated_client.put(
+            f"/api/items/{test_item.id}",
+            json={"is_checked": True},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        
+        assert data["updated_at"] != initial_updated_at

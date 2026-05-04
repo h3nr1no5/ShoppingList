@@ -18,6 +18,12 @@ backend/.env
 frontend/dist/
 *.db
 
+# Backend server logs
+backend/server.log
+backend/uvicorn.log
+backend/*.log
+backend/logs/
+
 # IDE
 .vscode/
 .idea/

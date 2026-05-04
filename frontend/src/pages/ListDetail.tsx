@@ -56,7 +56,7 @@ const ListDetail: React.FC = () => {
       });
       setList({
         ...list,
-        items: [...list.items, response.data],
+        items: [...(list.items ?? []), response.data],
       });
     } catch (err) {
       console.error('Failed to add item:', err);
@@ -74,12 +74,7 @@ const ListDetail: React.FC = () => {
       await apiClient.put(`/items/${itemId}`, {
         is_checked: isChecked,
       });
-      setList({
-        ...list,
-        items: list.items.map((item) =>
-          item.id === itemId ? { ...item, is_checked: isChecked } : item
-        ),
-      });
+      fetchList(); // Refresh to get updated_at
     } catch (err) {
       console.error('Failed to update item:', err);
       setError('Failed to update item');
@@ -93,11 +88,23 @@ const ListDetail: React.FC = () => {
       await apiClient.delete(`/items/${itemId}`);
       setList({
         ...list,
-        items: list.items.filter((item) => item.id !== itemId),
+        items: (list.items ?? []).filter((item) => item.id !== itemId),
       });
     } catch (err) {
       console.error('Failed to delete item:', err);
       setError('Failed to delete item');
+    }
+  };
+
+  const handleEditItem = async (itemId: string, name: string, quantity: number): Promise<void> => {
+    if (!list) return;
+
+    try {
+      await apiClient.put(`/items/${itemId}`, { name, quantity });
+      fetchList(); // Refresh the list to show updated data
+    } catch (err) {
+      console.error('Failed to edit item:', err);
+      setError('Failed to edit item');
     }
   };
 
@@ -163,8 +170,8 @@ const ListDetail: React.FC = () => {
     );
   }
 
-  const checkedCount = list.items.filter((item) => item.is_checked).length;
-  const totalCount = list.items.length;
+  const checkedCount = list.items?.filter((item) => item.is_checked).length ?? 0;
+  const totalCount = list.items?.length ?? 0;
 
   return (
     <div className="page">
@@ -226,13 +233,13 @@ const ListDetail: React.FC = () => {
         <div className="items-list">
           <ItemForm onSubmit={handleAddItem} />
 
-          {list.items.length === 0 ? (
+          {(list.items?.length ?? 0) === 0 ? (
             <div className="empty-state">
               <p>No items in this list.</p>
               <p>Add your first item above!</p>
             </div>
           ) : (
-            list.items
+            (list.items ?? [])
               .sort((a, b) => a.sort_order - b.sort_order)
               .map((item) => (
                 <ListItem
@@ -240,6 +247,7 @@ const ListDetail: React.FC = () => {
                   item={item}
                   onToggle={handleToggleItem}
                   onDelete={handleDeleteItem}
+                  onEdit={handleEditItem}
                 />
               ))
           )}
