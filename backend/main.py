@@ -17,7 +17,6 @@ from database import get_db, init_db
 from models import User, ShoppingList, ListItem
 from schemas import (
     UserCreate,
-    UserLogin,
     TokenResponse,
     ShoppingListCreate,
     ShoppingListUpdate,
@@ -42,6 +41,7 @@ from crud import (
     get_user_lists,
     get_list_by_id,
     get_list_by_share_code,
+    get_list_for_access,
     update_shopping_list,
     delete_shopping_list,
     generate_share_code,
@@ -88,10 +88,9 @@ async def get_list_access(
     - User is authenticated and owns the list
     - User is authenticated and list has no owner (anonymous list)
     - Valid share_code provided
-    - List is public
     """
-    # Try to get list by ID
-    shopping_list = await get_list_by_id(db, list_id)
+    # Try to get list by ID (no items needed — access check only)
+    shopping_list = await get_list_for_access(db, list_id)
     
     if not shopping_list:
         raise HTTPException(
@@ -107,9 +106,6 @@ async def get_list_access(
         has_access = True
     # Share code provided and matches
     elif share_code and shopping_list.share_code == share_code:
-        has_access = True
-    # Public list
-    elif shopping_list.is_public:
         has_access = True
     
     if not has_access:
@@ -154,11 +150,11 @@ async def register(
 ):
     """
     Register a new user and return JWT token.
-    Requires valid registration key.
+    Requires valid registration key if REGISTRATION_KEY is set.
     """
-    # Check registration key
+    # Check registration key - only enforce if REGISTRATION_KEY is set
     registration_key = os.getenv("REGISTRATION_KEY")
-    if not registration_key or user_data.invite_code != registration_key:
+    if registration_key and user_data.invite_code != registration_key:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid invite code",
@@ -240,9 +236,17 @@ async def get_list(
 ):
     """
     Get shopping list details.
-    Access: auth user (owner), share_code, or public list.
+    Access: auth user (owner) or share_code.
     """
-    shopping_list = await get_list_access(list_id, share_code, current_user, db)
+    # Check access (lightweight, no items loaded)
+    await get_list_access(list_id, share_code, current_user, db)
+    # Re-query with items for the response
+    shopping_list = await get_list_by_id(db, list_id)
+    if not shopping_list:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Shopping list not found",
+        )
     return shopping_list
 
 
@@ -260,7 +264,7 @@ async def update_list(
 ):
     """
     Update shopping list details.
-    Access: auth user (owner), share_code, or public list.
+    Access: auth user (owner) or share_code.
     """
     shopping_list = await get_list_access(list_id, share_code, current_user, db)
     updated_list = await update_shopping_list(db, shopping_list, list_data)
@@ -281,7 +285,7 @@ async def delete_list(
     Delete a shopping list.
     Requires authentication and owner must be the list owner.
     """
-    shopping_list = await get_list_by_id(db, list_id)
+    shopping_list = await get_list_for_access(db, list_id)
     
     if not shopping_list:
         raise HTTPException(
@@ -314,7 +318,7 @@ async def create_share_link(
     Generate or update share code for a shopping list.
     Requires authentication and owner must be the list owner.
     """
-    shopping_list = await get_list_by_id(db, list_id)
+    shopping_list = await get_list_for_access(db, list_id)
     
     if not shopping_list:
         raise HTTPException(
@@ -373,7 +377,7 @@ async def get_items(
 ):
     """
     Get all items in a shopping list.
-    Access: auth user (owner), share_code, or public list.
+    Access: auth user (owner) or share_code.
     """
     shopping_list = await get_list_access(list_id, share_code, current_user, db)
     items = await get_items_by_list_id(db, list_id)
@@ -394,7 +398,7 @@ async def add_item(
 ):
     """
     Add a new item to a shopping list.
-    Access: auth user (owner), share_code, or public list.
+    Access: auth user (owner) or share_code.
     """
     shopping_list = await get_list_access(list_id, share_code, current_user, db)
     item = await create_list_item(db, list_id, item_data)
@@ -415,7 +419,7 @@ async def update_item(
 ):
     """
     Update a list item.
-    Access: auth user (owner), share_code, or public list.
+    Access: auth user (owner) or share_code.
     """
     item, _ = await get_item_with_list_access(item_id, share_code, current_user, db)
     updated_item = await update_list_item(db, item, item_data)
@@ -435,7 +439,7 @@ async def delete_item(
 ):
     """
     Delete a list item.
-    Access: auth user (owner), share_code, or public list.
+    Access: auth user (owner) or share_code.
     """
     item, _ = await get_item_with_list_access(item_id, share_code, current_user, db)
     await delete_list_item(db, item)

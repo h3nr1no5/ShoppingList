@@ -1,98 +1,66 @@
 """
 Integration tests for authentication routes.
 """
-import pytest
+import os
 from httpx import AsyncClient
 
 
 class TestRegister:
     """Tests for POST /api/auth/register."""
 
-    async def test_register_success(self, client: AsyncClient, monkeypatch):
-        """Registering with valid data should return token."""
-        monkeypatch.delenv("REGISTRATION_KEY", raising=False)
+    async def test_register_success(self, client: AsyncClient):
+        """Registering with valid invite code should return token."""
         response = await client.post(
             "/api/auth/register",
-            json={"email": "newuser@example.com", "password": "password123"},
+            json={"email": "newuser@example.com", "password": "password123", "invite_code": os.environ["REGISTRATION_KEY"]},
         )
         assert response.status_code == 200
         data = response.json()
         assert "access_token" in data
         assert data["token_type"] == "bearer"
 
-    async def test_register_duplicate_email(self, client: AsyncClient, test_user, monkeypatch):
+    async def test_register_duplicate_email(self, client: AsyncClient, test_user):
         """Registering with duplicate email should return 400."""
-        monkeypatch.delenv("REGISTRATION_KEY", raising=False)
         response = await client.post(
             "/api/auth/register",
-            json={"email": test_user.email, "password": "password123"},
+            json={"email": test_user.email, "password": "password123", "invite_code": os.environ["REGISTRATION_KEY"]},
         )
         assert response.status_code == 400
 
-    async def test_register_short_password(self, client: AsyncClient, monkeypatch):
+    async def test_register_short_password(self, client: AsyncClient):
         """Registering with short password should return 422."""
-        monkeypatch.delenv("REGISTRATION_KEY", raising=False)
         response = await client.post(
             "/api/auth/register",
-            json={"email": "user@example.com", "password": "short"},
+            json={"email": "user@example.com", "password": "short", "invite_code": os.environ["REGISTRATION_KEY"]},
         )
         assert response.status_code == 422
 
-    async def test_register_invalid_email(self, client: AsyncClient, monkeypatch):
+    async def test_register_invalid_email(self, client: AsyncClient):
         """Registering with invalid email should return 422."""
-        monkeypatch.delenv("REGISTRATION_KEY", raising=False)
         response = await client.post(
             "/api/auth/register",
-            json={"email": "not-an-email", "password": "password123"},
+            json={"email": "not-an-email", "password": "password123", "invite_code": os.environ["REGISTRATION_KEY"]},
         )
         assert response.status_code == 422
 
-    async def test_register_missing_fields(self, client: AsyncClient, monkeypatch):
+    async def test_register_missing_fields(self, client: AsyncClient):
         """Registering with missing fields should return 422."""
-        monkeypatch.delenv("REGISTRATION_KEY", raising=False)
         response = await client.post(
             "/api/auth/register",
             json={"email": "user@example.com"},
         )
         assert response.status_code == 422
 
-    async def test_register_without_invite_code_when_registration_key_not_set(
-        self, client: AsyncClient, monkeypatch
-    ):
-        """Registering without invite code when REGISTRATION_KEY is not set should succeed."""
-        monkeypatch.delenv("REGISTRATION_KEY", raising=False)
+    async def test_register_without_invite_code(self, client: AsyncClient):
+        """Registering without invite code should return 400."""
         response = await client.post(
             "/api/auth/register",
             json={"email": "newuser_noinvite@example.com", "password": "password123"},
         )
-        assert response.status_code == 200
-        data = response.json()
-        assert "access_token" in data
-        assert data["token_type"] == "bearer"
+        assert response.status_code == 400
 
-    async def test_register_with_valid_invite_code(
-        self, client: AsyncClient, monkeypatch
-    ):
-        """Registering with valid invite code when REGISTRATION_KEY is set should succeed."""
-        monkeypatch.setenv("REGISTRATION_KEY", "test-secret-key")
-        response = await client.post(
-            "/api/auth/register",
-            json={
-                "email": "newuser_validinvite@example.com",
-                "password": "password123",
-                "invite_code": "test-secret-key",
-            },
-        )
-        assert response.status_code == 200
-        data = response.json()
-        assert "access_token" in data
-        assert data["token_type"] == "bearer"
-
-    async def test_register_with_invalid_invite_code(
-        self, client: AsyncClient, monkeypatch
-    ):
-        """Registering with invalid invite code should succeed (registration is open)."""
-        # Registration is now open to everyone, invite codes are ignored
+    async def test_register_with_invalid_invite_code(self, client: AsyncClient):
+        """Registering with invalid invite code should return 400."""
         response = await client.post(
             "/api/auth/register",
             json={
@@ -101,20 +69,7 @@ class TestRegister:
                 "invite_code": "wrong-code",
             },
         )
-        assert response.status_code == 200
-        assert "access_token" in response.json()
-
-    async def test_register_missing_invite_code_when_required(
-        self, client: AsyncClient, monkeypatch
-    ):
-        """Registering without invite code should succeed (registration is open)."""
-        # Registration is now open to everyone, invite codes are ignored
-        response = await client.post(
-            "/api/auth/register",
-            json={"email": "newuser_missinginvite@example.com", "password": "password123"},
-        )
-        assert response.status_code == 200
-        assert "access_token" in response.json()
+        assert response.status_code == 400
 
 
 class TestLogin:

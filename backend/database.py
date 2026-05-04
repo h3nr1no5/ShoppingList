@@ -76,11 +76,12 @@ if not is_sqlite:
     engine_kwargs["pool_pre_ping"] = True
     engine_kwargs["pool_size"] = 10
     engine_kwargs["max_overflow"] = 20
-    # Enable SSL for Azure PostgreSQL
-    # asyncpg accepts ssl=True to enable SSL mode
-    engine_kwargs["connect_args"] = {
-        "ssl": True,
-    }
+    # Enable SSL only for Azure PostgreSQL (not for local Docker Postgres)
+    # Azure requires SSL, local development does not
+    if "azure" in DATABASE_URL.lower() or "cloudapp" in DATABASE_URL.lower():
+        engine_kwargs["connect_args"] = {
+            "ssl": True,
+        }
 
 engine = create_async_engine(DATABASE_URL, **engine_kwargs)
 

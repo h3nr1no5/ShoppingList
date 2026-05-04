@@ -3,7 +3,7 @@ Security-focused tests for authentication.
 """
 import uuid
 import pytest
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from jose import jwt, JWTError
 from httpx import AsyncClient
 
@@ -24,7 +24,7 @@ class TestTokenValidation:
     async def test_expired_token(self, client: AsyncClient, test_user):
         """Expired token should return 401."""
         # Create an expired token
-        expired_expire = datetime.utcnow() - timedelta(hours=1)
+        expired_expire = datetime.now(timezone.utc) - timedelta(hours=1)
         expired_payload = {
             "sub": str(test_user.id),
             "email": test_user.email,
@@ -42,7 +42,7 @@ class TestTokenValidation:
         """Token without 'sub' claim should return 401."""
         payload = {
             "email": "test@example.com",
-            "exp": datetime.utcnow() + timedelta(minutes=30),
+            "exp": datetime.now(timezone.utc) + timedelta(minutes=30),
         }
         token = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
         
@@ -57,7 +57,7 @@ class TestTokenValidation:
         payload = {
             "sub": "not-a-uuid",
             "email": "test@example.com",
-            "exp": datetime.utcnow() + timedelta(minutes=30),
+            "exp": datetime.now(timezone.utc) + timedelta(minutes=30),
         }
         token = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
         
@@ -103,7 +103,7 @@ class TestTokenValidation:
 class TestPasswordSecurity:
     """Tests for password hashing security."""
 
-    def test_password_is_hashed(self, test_user):
+    async def test_password_is_hashed(self, test_user):
         """Stored password should be hashed, not plaintext."""
         assert test_user.password_hash != "TestPassword123!"
         assert len(test_user.password_hash) > 50  # bcrypt hashes are long
@@ -165,24 +165,24 @@ class TestAuthorizationEdgeCases:
 class TestTokenExpiry:
     """Tests for token expiry configuration."""
 
-    def test_token_has_expiry(self, test_user):
+    async def test_token_has_expiry(self, test_user):
         """Created token should have an expiry."""
         token = create_access_token(test_user.id, test_user.email)
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         assert "exp" in payload
 
-    def test_token_expiry_is_in_future(self, test_user):
+    async def test_token_expiry_is_in_future(self, test_user):
         """Token expiry should be in the future."""
         token = create_access_token(test_user.id, test_user.email)
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        expiry = datetime.utcfromtimestamp(payload["exp"])
-        assert expiry > datetime.utcnow()
+        expiry = datetime.fromtimestamp(payload["exp"], tz=timezone.utc)
+        assert expiry > datetime.now(timezone.utc)
 
-    def test_token_expiry_matches_config(self, test_user):
+    async def test_token_expiry_matches_config(self, test_user):
         """Token expiry should match ACCESS_TOKEN_EXPIRE_MINUTES."""
         token = create_access_token(test_user.id, test_user.email)
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        expiry = datetime.utcfromtimestamp(payload["exp"])
-        expected_expiry = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        expiry = datetime.fromtimestamp(payload["exp"], tz=timezone.utc)
+        expected_expiry = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
         # Allow 5 second tolerance for test execution time
         assert abs((expiry - expected_expiry).total_seconds()) < 5

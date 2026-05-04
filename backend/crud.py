@@ -2,10 +2,10 @@
 CRUD operations for database entities.
 """
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
-from sqlalchemy import select, func
+from sqlalchemy import select, func, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -128,6 +128,17 @@ async def get_list_by_id(
     return result.scalar_one_or_none()
 
 
+async def get_list_for_access(
+    db: AsyncSession,
+    list_id: uuid.UUID,
+) -> Optional[ShoppingList]:
+    """Get list without loading items — for access checks only."""
+    result = await db.execute(
+        select(ShoppingList).where(ShoppingList.id == list_id)
+    )
+    return result.scalar_one_or_none()
+
+
 async def get_list_by_share_code(
     db: AsyncSession,
     share_code: uuid.UUID,
@@ -155,7 +166,7 @@ async def update_shopping_list(
     for field, value in update_data.items():
         setattr(shopping_list, field, value)
     
-    shopping_list.updated_at = datetime.utcnow()
+    shopping_list.updated_at = datetime.now(timezone.utc)
     await db.commit()
     await db.refresh(shopping_list)
     return shopping_list
@@ -180,10 +191,22 @@ async def generate_share_code(
     Generate or update share code for a shopping list.
     """
     shopping_list.share_code = uuid.uuid4()
-    shopping_list.updated_at = datetime.utcnow()
+    shopping_list.updated_at = datetime.now(timezone.utc)
     await db.commit()
     await db.refresh(shopping_list)
     return shopping_list
+
+
+async def bump_list_updated_at(
+    db: AsyncSession,
+    list_id: uuid.UUID,
+) -> None:
+    """Bump updated_at with a single UPDATE — no SELECT needed."""
+    await db.execute(
+        update(ShoppingList)
+        .where(ShoppingList.id == list_id)
+        .values(updated_at=datetime.now(timezone.utc))
+    )
 
 
 # ==================== List Item CRUD ====================
@@ -251,13 +274,8 @@ async def create_list_item(
     )
     db.add(item)
     
-    # Update list's updated_at
-    result = await db.execute(
-        select(ShoppingList).where(ShoppingList.id == list_id)
-    )
-    shopping_list = result.scalar_one_or_none()
-    if shopping_list:
-        shopping_list.updated_at = datetime.utcnow()
+    # Update list's updated_at with a single UPDATE statement
+    await bump_list_updated_at(db, list_id)
     
     await db.commit()
     await db.refresh(item)
@@ -276,13 +294,8 @@ async def update_list_item(
     for field, value in update_data.items():
         setattr(item, field, value)
     
-    # Update list's updated_at
-    result = await db.execute(
-        select(ShoppingList).where(ShoppingList.id == item.list_id)
-    )
-    shopping_list = result.scalar_one_or_none()
-    if shopping_list:
-        shopping_list.updated_at = datetime.utcnow()
+    # Update list's updated_at with a single UPDATE statement
+    await bump_list_updated_at(db, item.list_id)
     
     await db.commit()
     await db.refresh(item)
@@ -300,12 +313,7 @@ async def delete_list_item(
     
     await db.delete(item)
     
-    # Update list's updated_at
-    result = await db.execute(
-        select(ShoppingList).where(ShoppingList.id == list_id)
-    )
-    shopping_list = result.scalar_one_or_none()
-    if shopping_list:
-        shopping_list.updated_at = datetime.utcnow()
+    # Update list's updated_at with a single UPDATE statement
+    await bump_list_updated_at(db, list_id)
     
     await db.commit()

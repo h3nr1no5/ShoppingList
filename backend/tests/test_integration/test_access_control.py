@@ -2,7 +2,6 @@
 Integration tests for access control on shopping lists.
 """
 import uuid
-import pytest
 from httpx import AsyncClient
 
 from models import ShoppingList
@@ -92,6 +91,36 @@ class TestShareCodeAccess:
         )
         assert response.status_code == 200
 
+    async def test_update_item_with_share_code(
+        self,
+        client: AsyncClient,
+        test_list_with_share_code,
+        db_session,
+    ):
+        """User with share code should update items."""
+        from models import ListItem
+
+        # Create an item on the shared list
+        item = ListItem(
+            list_id=test_list_with_share_code.id,
+            name="Shared Item",
+            quantity=1,
+            is_checked=False,
+            sort_order=0,
+        )
+        db_session.add(item)
+        await db_session.commit()
+        await db_session.refresh(item)
+
+        share_code = test_list_with_share_code.share_code
+        response = await client.put(
+            f"/api/items/{item.id}",
+            json={"is_checked": True},
+            params={"share_code": share_code},
+        )
+        assert response.status_code == 200
+        assert response.json()["is_checked"] is True
+
     async def test_delete_item_with_share_code(
         self,
         client: AsyncClient,
@@ -127,28 +156,6 @@ class TestShareCodeAccess:
             params={"share_code": uuid.uuid4()},
         )
         assert response.status_code == 401
-
-
-class TestPublicListAccess:
-    """Tests for public list access patterns."""
-
-    async def test_public_list_accessible_without_auth(self, client: AsyncClient, test_list_public):
-        """Public list should be accessible without auth."""
-        response = await client.get(f"/api/lists/{test_list_public.id}")
-        assert response.status_code == 200
-
-    async def test_public_list_items_accessible(self, client: AsyncClient, test_list_public, test_item):
-        """Public list items should be accessible without auth."""
-        response = await client.get(f"/api/lists/{test_list_public.id}/items")
-        assert response.status_code == 200
-
-    async def test_public_list_updateable(self, client: AsyncClient, test_list_public):
-        """Public list should be updateable by anyone."""
-        response = await client.put(
-            f"/api/lists/{test_list_public.id}",
-            json={"name": "Updated Public List"},
-        )
-        assert response.status_code == 200
 
 
 class TestPrivateListAccess:

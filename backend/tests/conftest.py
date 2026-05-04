@@ -10,17 +10,23 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 
-# Set SECRET_KEY BEFORE importing the app (auth.py reads it at import time)
+# Set secrets BEFORE importing the app (auth.py reads SECRET_KEY at import time)
 os.environ["SECRET_KEY"] = "test-secret-key-for-testing-only-do-not-use-in-production"
-os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///./test_shopping_list.db"
+
+# Load REGISTRATION_KEY from .env file (never hardcode secrets)
+from dotenv import load_dotenv
+load_dotenv()  # loads from project root .env
+
+# Only set SQLite default if DATABASE_URL is not already set
+os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///./test_shopping_list.db")
 
 from database import get_db, Base
 from models import User, ShoppingList, ListItem
 from auth import get_password_hash, create_access_token
 from main import app
 
-# Create test engine
-TEST_DATABASE_URL = "sqlite+aiosqlite:///./test_shopping_list.db"
+# Use DATABASE_URL from environment (allows PostgreSQL testing)
+TEST_DATABASE_URL = os.environ["DATABASE_URL"]
 engine = create_async_engine(TEST_DATABASE_URL, echo=False)
 TestSessionLocal = async_sessionmaker(
     engine,
@@ -138,7 +144,6 @@ async def test_list_public(db_session: AsyncSession, test_user: User) -> Shoppin
     shopping_list = ShoppingList(
         name="Public Shopping List",
         owner_id=test_user.id,
-        is_public=True,
     )
     db_session.add(shopping_list)
     await db_session.commit()

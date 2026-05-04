@@ -1,10 +1,14 @@
+from __future__ import annotations
 """
 Authentication logic including JWT token handling and password hashing.
 """
+
 import os
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
+
+from dataclasses import dataclass
 
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -28,6 +32,13 @@ if not SECRET_KEY:
     )
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
+
+
+@dataclass
+class CachedUser:
+    """Lightweight user from JWT — no DB hit needed."""
+    id: uuid.UUID
+    email: str
 
 
 # ==================== Password Hashing ====================
@@ -54,7 +65,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login", auto_error=False)
 
 def create_access_token(user_id: uuid.UUID, email: str = "") -> str:
     """Create JWT access token."""
-    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode = {
         "sub": str(user_id),
         "email": email,
@@ -67,7 +78,7 @@ def create_access_token(user_id: uuid.UUID, email: str = "") -> str:
 async def get_current_user(
     token: Optional[str] = Depends(oauth2_scheme),
     db: AsyncSession = Depends(get_db),
-) -> User:
+) -> "User | CachedUser":
     """
     Get current authenticated user from JWT token.
     Raises 401 if token is invalid or user not found.
@@ -90,23 +101,21 @@ async def get_current_user(
     except (JWTError, ValueError):
         raise credentials_exception
     
-    # Query user from database
-    result = await db.execute(select(User).where(User.id == user_id))
-    user = result.scalar_one_or_none()
-    
-    if user is None:
+    # Verify user still exists in database (lightweight query by primary key)
+    result = await db.execute(select(User.id).where(User.id == user_id))
+    if result.scalar_one_or_none() is None:
         raise credentials_exception
     
-    return user
+    # Return a lightweight user object — enough for ownership checks
+    return CachedUser(id=user_id, email=payload.get("email", ""))
 
 
 async def get_current_user_optional(
     token: Optional[str] = Depends(oauth2_scheme),
     db: AsyncSession = Depends(get_db),
-) -> Optional[User]:
+) -> Optional[User | CachedUser]:
     """
     Get current user if authenticated, otherwise return None.
-    Used for endpoints that support both authenticated and anonymous access.
     """
     try:
         return await get_current_user(token, db)

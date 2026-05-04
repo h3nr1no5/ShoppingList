@@ -15,7 +15,7 @@ class UserCreate(BaseModel):
     """Schema for user registration."""
     email: EmailStr
     password: str
-    invite_code: str
+    invite_code: Optional[str] = None
     
     @field_validator("password")
     @classmethod
@@ -62,7 +62,6 @@ class ShoppingListUpdate(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     
     name: Optional[str] = None
-    is_public: Optional[bool] = None
 
 
 class ShoppingListResponse(ShoppingListBase):
@@ -72,7 +71,6 @@ class ShoppingListResponse(ShoppingListBase):
     id: uuid.UUID
     owner_id: Optional[uuid.UUID]
     share_code: Optional[uuid.UUID]
-    is_public: bool
     created_at: datetime
     updated_at: datetime
 

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import React, { createContext, useState, type ReactNode } from 'react';
 import { type User, type LoginRequest, type RegisterRequest, type AuthResponse } from '../types';
 import apiClient from '../api/client';
 
@@ -13,6 +13,8 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export { AuthContext };
 
 interface AuthProviderProps {
   children: ReactNode;
@@ -32,24 +34,15 @@ const decodeToken = (token: string): User | null => {
 };
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [token, setToken] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [token, setToken] = useState<string | null>(() => {
+    return localStorage.getItem('token');
+  });
 
   // Initialize user from stored token (don't store user object in localStorage)
-  const [user, setUser] = useState<User | null>(null);
-
-  useEffect(() => {
+  const [user, setUser] = useState<User | null>(() => {
     const storedToken = localStorage.getItem('token');
-
-    if (storedToken) {
-      const decodedUser = decodeToken(storedToken);
-      if (decodedUser) {
-        setToken(storedToken);
-        setUser(decodedUser);
-      }
-    }
-    setLoading(false);
-  }, []);
+    return storedToken ? decodeToken(storedToken) : null;
+  });
 
   const login = async (credentials: LoginRequest): Promise<void> => {
     // OAuth2PasswordRequestForm expects form-encoded data with 'username' field
@@ -97,18 +90,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         login,
         register,
         logout,
-        loading,
+        loading: false,
       }}
     >
       {children}
     </AuthContext.Provider>
   );
-};
-
-export const useAuth = (): AuthContextType => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
 };

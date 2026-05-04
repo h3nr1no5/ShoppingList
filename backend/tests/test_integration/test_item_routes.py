@@ -2,7 +2,6 @@
 Integration tests for item routes.
 """
 import uuid
-import pytest
 from httpx import AsyncClient
 
 

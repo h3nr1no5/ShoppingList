@@ -1,6 +1,7 @@
 """
 Unit tests for CRUD operations.
 """
+import os
 import uuid
 import pytest
 
@@ -32,7 +33,7 @@ class TestUserCrud:
 
     async def test_create_user_success(self, db_session):
         """Creating a user should succeed and return the user."""
-        user_data = UserCreate(email="newuser@example.com", password="password123")
+        user_data = UserCreate(email="newuser@example.com", password="password123", invite_code=os.environ["REGISTRATION_KEY"])
         user = await create_user(db_session, user_data)
         assert user.email == "newuser@example.com"
         assert user.id is not None
@@ -40,7 +41,7 @@ class TestUserCrud:
 
     async def test_create_user_duplicate_email_raises(self, db_session, test_user):
         """Creating a user with duplicate email should raise ValueError."""
-        user_data = UserCreate(email=test_user.email, password="password123")
+        user_data = UserCreate(email=test_user.email, password="password123", invite_code=os.environ["REGISTRATION_KEY"])
         with pytest.raises(ValueError, match="Email already registered"):
             await create_user(db_session, user_data)
 
@@ -141,19 +142,12 @@ class TestShoppingListCrud:
         updated = await update_shopping_list(db_session, test_list, update_data)
         assert updated.name == "Updated Name"
 
-    async def test_update_shopping_list_is_public(self, db_session, test_list):
-        """Updating is_public should change the value."""
-        update_data = ShoppingListUpdate(is_public=True)
-        updated = await update_shopping_list(db_session, test_list, update_data)
-        assert updated.is_public is True
-
     async def test_update_shopping_list_partial(self, db_session, test_list):
         """Partial update should only change specified fields."""
         original_name = test_list.name
-        update_data = ShoppingListUpdate(is_public=True)
+        update_data = ShoppingListUpdate()
         updated = await update_shopping_list(db_session, test_list, update_data)
         assert updated.name == original_name
-        assert updated.is_public is True
 
     async def test_delete_shopping_list(self, db_session, test_list):
         """Deleting a list should remove it."""

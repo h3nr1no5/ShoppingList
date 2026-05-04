@@ -1,8 +1,9 @@
 """
 Unit tests for Pydantic schemas.
 """
+import os
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pytest
 from pydantic import ValidationError
@@ -27,30 +28,30 @@ from schemas import (
 
 class TestUserCreate:
     def test_valid_user_create(self):
-        data = UserCreate(email="test@example.com", password="password123")
+        data = UserCreate(email="test@example.com", password="password123", invite_code=os.environ["REGISTRATION_KEY"])
         assert data.email == "test@example.com"
         assert data.password == "password123"
 
     def test_invalid_email(self):
         with pytest.raises(ValidationError):
-            UserCreate(email="not-an-email", password="password123")
+            UserCreate(email="not-an-email", password="password123", invite_code=os.environ["REGISTRATION_KEY"])
 
     def test_password_too_short(self):
         with pytest.raises(ValidationError) as exc_info:
-            UserCreate(email="test@example.com", password="short")
+            UserCreate(email="test@example.com", password="short", invite_code=os.environ["REGISTRATION_KEY"])
         assert "8 characters" in str(exc_info.value)
 
     def test_password_minimum_length(self):
-        data = UserCreate(email="test@example.com", password="12345678")
+        data = UserCreate(email="test@example.com", password="12345678", invite_code=os.environ["REGISTRATION_KEY"])
         assert data.password == "12345678"
 
     def test_missing_email(self):
         with pytest.raises(ValidationError):
-            UserCreate(password="password123")
+            UserCreate(password="password123", invite_code=os.environ["REGISTRATION_KEY"])
 
     def test_missing_password(self):
         with pytest.raises(ValidationError):
-            UserCreate(email="test@example.com")
+            UserCreate(email="test@example.com", invite_code=os.environ["REGISTRATION_KEY"])
 
 
 class TestUserLogin:
@@ -100,38 +101,28 @@ class TestShoppingListUpdate:
     def test_update_name(self):
         data = ShoppingListUpdate(name="New Name")
         assert data.name == "New Name"
-        assert data.is_public is None
-
-    def test_update_is_public(self):
-        data = ShoppingListUpdate(is_public=True)
-        assert data.is_public is True
-        assert data.name is None
 
     def test_update_both_fields(self):
-        data = ShoppingListUpdate(name="New Name", is_public=True)
+        data = ShoppingListUpdate(name="New Name")
         assert data.name == "New Name"
-        assert data.is_public is True
 
     def test_all_fields_optional(self):
         data = ShoppingListUpdate()
         assert data.name is None
-        assert data.is_public is None
 
 
 class TestShoppingListResponse:
     def test_valid_response(self):
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         data = ShoppingListResponse(
             id=uuid.uuid4(),
             name="Groceries",
             owner_id=uuid.uuid4(),
             share_code=None,
-            is_public=False,
             created_at=now,
             updated_at=now,
         )
         assert data.name == "Groceries"
-        assert data.is_public is False
         assert data.share_code is None
 
     def test_from_attributes(self):
@@ -140,25 +131,22 @@ class TestShoppingListResponse:
             name = "Test"
             owner_id = uuid.uuid4()
             share_code = uuid.uuid4()
-            is_public = True
-            created_at = datetime.utcnow()
-            updated_at = datetime.utcnow()
+            created_at = datetime.now(timezone.utc)
+            updated_at = datetime.now(timezone.utc)
 
         mock = MockList()
         data = ShoppingListResponse.model_validate(mock)
         assert data.name == "Test"
-        assert data.is_public is True
 
 
 class TestShoppingListWithItemsResponse:
     def test_with_empty_items(self):
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         data = ShoppingListWithItemsResponse(
             id=uuid.uuid4(),
             name="Groceries",
             owner_id=None,
             share_code=None,
-            is_public=False,
             created_at=now,
             updated_at=now,
             items=[],
@@ -166,7 +154,7 @@ class TestShoppingListWithItemsResponse:
         assert data.items == []
 
     def test_with_items(self):
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         list_id = uuid.uuid4()
         item = ListItemResponse(
             id=uuid.uuid4(),
@@ -182,7 +170,6 @@ class TestShoppingListWithItemsResponse:
             name="Groceries",
             owner_id=None,
             share_code=None,
-            is_public=False,
             created_at=now,
             updated_at=now,
             items=[item],
@@ -251,7 +238,7 @@ class TestListItemUpdate:
 
 class TestListItemResponse:
     def test_valid_response(self):
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         list_id = uuid.uuid4()
         data = ListItemResponse(
             id=uuid.uuid4(),
