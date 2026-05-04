@@ -93,15 +93,6 @@ class TestUpdateList:
         assert response.status_code == 200
         assert response.json()["name"] == "Updated Name"
 
-    async def test_update_list_is_public(self, authenticated_client: AsyncClient, test_list):
-        """Updating list is_public should succeed."""
-        response = await authenticated_client.put(
-            f"/api/lists/{test_list.id}",
-            json={"is_public": True},
-        )
-        assert response.status_code == 200
-        assert response.json()["is_public"] is True
-
     async def test_update_list_partial(self, authenticated_client: AsyncClient, test_list):
         """Partial update should only change specified fields."""
         response = await authenticated_client.put(
@@ -110,7 +101,6 @@ class TestUpdateList:
         )
         assert response.status_code == 200
         assert response.json()["name"] == "New Name"
-        assert response.json()["is_public"] == test_list.is_public
 
 
 class TestDeleteList:

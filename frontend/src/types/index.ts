@@ -8,7 +8,6 @@ export interface ShoppingList {
   name: string;
   owner_id: string | null;
   share_code: string | null;
-  is_public: boolean;
   items: ListItem[];
   created_at: string;
   updated_at: string;

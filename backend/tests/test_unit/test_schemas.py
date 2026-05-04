@@ -101,22 +101,14 @@ class TestShoppingListUpdate:
     def test_update_name(self):
         data = ShoppingListUpdate(name="New Name")
         assert data.name == "New Name"
-        assert data.is_public is None
-
-    def test_update_is_public(self):
-        data = ShoppingListUpdate(is_public=True)
-        assert data.is_public is True
-        assert data.name is None
 
     def test_update_both_fields(self):
-        data = ShoppingListUpdate(name="New Name", is_public=True)
+        data = ShoppingListUpdate(name="New Name")
         assert data.name == "New Name"
-        assert data.is_public is True
 
     def test_all_fields_optional(self):
         data = ShoppingListUpdate()
         assert data.name is None
-        assert data.is_public is None
 
 
 class TestShoppingListResponse:
@@ -127,12 +119,10 @@ class TestShoppingListResponse:
             name="Groceries",
             owner_id=uuid.uuid4(),
             share_code=None,
-            is_public=False,
             created_at=now,
             updated_at=now,
         )
         assert data.name == "Groceries"
-        assert data.is_public is False
         assert data.share_code is None
 
     def test_from_attributes(self):
@@ -141,14 +131,12 @@ class TestShoppingListResponse:
             name = "Test"
             owner_id = uuid.uuid4()
             share_code = uuid.uuid4()
-            is_public = True
             created_at = datetime.utcnow()
             updated_at = datetime.utcnow()
 
         mock = MockList()
         data = ShoppingListResponse.model_validate(mock)
         assert data.name == "Test"
-        assert data.is_public is True
 
 
 class TestShoppingListWithItemsResponse:
@@ -159,7 +147,6 @@ class TestShoppingListWithItemsResponse:
             name="Groceries",
             owner_id=None,
             share_code=None,
-            is_public=False,
             created_at=now,
             updated_at=now,
             items=[],
@@ -183,7 +170,6 @@ class TestShoppingListWithItemsResponse:
             name="Groceries",
             owner_id=None,
             share_code=None,
-            is_public=False,
             created_at=now,
             updated_at=now,
             items=[item],

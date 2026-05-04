@@ -1,5 +1,6 @@
 import React from 'react';
 import { type ListItem as ListItemType } from '../types';
+import Swipeable from './Swipeable';
 
 interface ListItemProps {
   item: ListItemType;
@@ -18,7 +19,7 @@ const ListItem: React.FC<ListItemProps> = ({ item, onToggle, onDelete }) => {
     }
   };
 
-  return (
+  const itemContent = (
     <div className={`list-item ${item.is_checked ? 'checked' : ''}`}>
       <label className="list-item-checkbox">
         <input
@@ -46,6 +47,12 @@ const ListItem: React.FC<ListItemProps> = ({ item, onToggle, onDelete }) => {
         🗑️
       </button>
     </div>
+  );
+
+  return (
+    <Swipeable onSwipe={handleDelete}>
+      {itemContent}
+    </Swipeable>
   );
 };
 

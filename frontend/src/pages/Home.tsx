@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 import { type ShoppingList } from '../types';
 import apiClient from '../api/client';
 import Header from '../components/Header';
@@ -14,20 +14,9 @@ const Home: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
   const [loadingLists, setLoadingLists] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const initialFetchDone = useRef(false);
 
-  useEffect(() => {
-    if (!loading && !isAuthenticated) {
-      navigate('/login');
-    }
-  }, [loading, isAuthenticated, navigate]);
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      fetchLists();
-    }
-  }, [isAuthenticated]);
-
-  const fetchLists = async (): Promise<void> => {
+  const fetchLists = useCallback(async (): Promise<void> => {
     try {
       setLoadingLists(true);
       const response = await apiClient.get<ShoppingList[]>('/lists');
@@ -38,13 +27,25 @@ const Home: React.FC = () => {
     } finally {
       setLoadingLists(false);
     }
-  };
+  }, []);
 
-  const handleCreateList = async (name: string, isPublic: boolean): Promise<void> => {
+  useEffect(() => {
+    if (!loading && !isAuthenticated) {
+      navigate('/login');
+    }
+  }, [loading, isAuthenticated, navigate]);
+
+  useEffect(() => {
+    if (isAuthenticated && !initialFetchDone.current) {
+      initialFetchDone.current = true;
+      fetchLists();
+    }
+  }, [isAuthenticated, fetchLists]);
+
+  const handleCreateList = async (name: string): Promise<void> => {
     try {
       const response = await apiClient.post<ShoppingList>('/lists', {
         name,
-        is_public: isPublic,
       });
       setLists([...lists, response.data]);
       setShowForm(false);

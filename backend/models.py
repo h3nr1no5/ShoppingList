@@ -74,6 +74,7 @@ class ShoppingList(Base):
         nullable=True,
         index=True,
     )
+    # DEPRECATED: is_public flag is no longer used. Column kept for DB compatibility (no migration system).
     is_public: Mapped[bool] = mapped_column(
         Boolean,
         default=False,

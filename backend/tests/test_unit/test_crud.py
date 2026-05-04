@@ -142,19 +142,12 @@ class TestShoppingListCrud:
         updated = await update_shopping_list(db_session, test_list, update_data)
         assert updated.name == "Updated Name"
 
-    async def test_update_shopping_list_is_public(self, db_session, test_list):
-        """Updating is_public should change the value."""
-        update_data = ShoppingListUpdate(is_public=True)
-        updated = await update_shopping_list(db_session, test_list, update_data)
-        assert updated.is_public is True
-
     async def test_update_shopping_list_partial(self, db_session, test_list):
         """Partial update should only change specified fields."""
         original_name = test_list.name
-        update_data = ShoppingListUpdate(is_public=True)
+        update_data = ShoppingListUpdate()
         updated = await update_shopping_list(db_session, test_list, update_data)
         assert updated.name == original_name
-        assert updated.is_public is True
 
     async def test_delete_shopping_list(self, db_session, test_list):
         """Deleting a list should remove it."""

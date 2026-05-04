@@ -143,7 +143,6 @@ async def test_list_public(db_session: AsyncSession, test_user: User) -> Shoppin
     shopping_list = ShoppingList(
         name="Public Shopping List",
         owner_id=test_user.id,
-        is_public=True,
     )
     db_session.add(shopping_list)
     await db_session.commit()

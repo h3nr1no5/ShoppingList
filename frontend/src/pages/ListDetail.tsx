@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 import { type ShoppingList, type ListItem as ListItemType } from '../types';
 import apiClient, { generateShareLink } from '../api/client';
 import Header from '../components/Header';
@@ -18,20 +18,9 @@ const ListDetail: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
+  const initialFetchDone = useRef(false);
 
-  useEffect(() => {
-    if (!loading && !isAuthenticated) {
-      navigate('/login');
-    }
-  }, [loading, isAuthenticated, navigate]);
-
-  useEffect(() => {
-    if (isAuthenticated && id) {
-      fetchList();
-    }
-  }, [isAuthenticated, id]);
-
-  const fetchList = async (): Promise<void> => {
+  const fetchList = useCallback(async (): Promise<void> => {
     try {
       setLoadingList(true);
       const response = await apiClient.get<ShoppingList>(`/lists/${id}`);
@@ -42,7 +31,20 @@ const ListDetail: React.FC = () => {
     } finally {
       setLoadingList(false);
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    if (!loading && !isAuthenticated) {
+      navigate('/login');
+    }
+  }, [loading, isAuthenticated, navigate]);
+
+  useEffect(() => {
+    if (isAuthenticated && id && !initialFetchDone.current) {
+      initialFetchDone.current = true;
+      fetchList();
+    }
+  }, [isAuthenticated, id, fetchList]);
 
   const handleAddItem = async (name: string, quantity: number): Promise<void> => {
     if (!list) return;
@@ -99,30 +101,15 @@ const ListDetail: React.FC = () => {
     }
   };
 
-  const handleUpdateList = async (name: string, isPublic: boolean): Promise<void> => {
+  const handleUpdateList = async (name: string): Promise<void> => {
     if (!list) return;
 
     try {
       const response = await apiClient.put<ShoppingList>(`/lists/${list.id}`, {
         name,
-        is_public: isPublic,
       });
       setList(response.data);
       setShowEditForm(false);
-    } catch (err) {
-      console.error('Failed to update list:', err);
-      setError('Failed to update list');
-    }
-  };
-
-  const handleTogglePublic = async (isPublic: boolean): Promise<void> => {
-    if (!list) return;
-
-    try {
-      const response = await apiClient.put<ShoppingList>(`/lists/${list.id}`, {
-        is_public: isPublic,
-      });
-      setList(response.data);
     } catch (err) {
       console.error('Failed to update list:', err);
       setError('Failed to update list');
@@ -183,7 +170,7 @@ const ListDetail: React.FC = () => {
     <div className="page">
       <Header />
       <main className="main">
-        <div className="page-header">
+        <div className="page-header page-header--compact">
           <button onClick={() => navigate('/')} className="btn btn-back">
             ← Back
           </button>
@@ -261,9 +248,7 @@ const ListDetail: React.FC = () => {
         <ShareModal
           isOpen={showShareModal}
           shareCode={list.share_code}
-          isPublic={list.is_public}
           onClose={() => setShowShareModal(false)}
-          onTogglePublic={handleTogglePublic}
           onGenerateShareLink={handleGenerateShareLink}
         />
       </main>

@@ -3,18 +3,14 @@ import React, { useState } from 'react';
 interface ShareModalProps {
   isOpen: boolean;
   shareCode: string | null;
-  isPublic: boolean;
   onClose: () => void;
-  onTogglePublic: (isPublic: boolean) => void;
   onGenerateShareLink?: () => Promise<string | null>;
 }
 
 const ShareModal: React.FC<ShareModalProps> = ({
   isOpen,
   shareCode,
-  isPublic,
   onClose,
-  onTogglePublic,
   onGenerateShareLink,
 }) => {
   const [copied, setCopied] = useState(false);
@@ -95,15 +91,6 @@ const ShareModal: React.FC<ShareModalProps> = ({
                   {copied ? 'Copied!' : 'Copy'}
                 </button>
               </div>
-
-              <label className="form-checkbox-label share-toggle">
-                <input
-                  type="checkbox"
-                  checked={isPublic}
-                  onChange={(e) => onTogglePublic(e.target.checked)}
-                />
-                <span>Make this list public</span>
-              </label>
             </>
           ) : onGenerateShareLink ? (
             <div className="share-generate-container">

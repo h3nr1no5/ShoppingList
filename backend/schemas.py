@@ -62,7 +62,6 @@ class ShoppingListUpdate(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     
     name: Optional[str] = None
-    is_public: Optional[bool] = None
 
 
 class ShoppingListResponse(ShoppingListBase):
@@ -72,7 +71,6 @@ class ShoppingListResponse(ShoppingListBase):
     id: uuid.UUID
     owner_id: Optional[uuid.UUID]
     share_code: Optional[uuid.UUID]
-    is_public: bool
     created_at: datetime
     updated_at: datetime
 

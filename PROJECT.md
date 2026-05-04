@@ -125,7 +125,7 @@ All routes use `/api/*` prefix except `/health`.
 
 ### ShoppingList
 
-- `id` (UUID), `name`, `owner_id` (FK → User, nullable), `share_code` (UUID, nullable), `is_public`, `created_at`, `updated_at`
+- `id` (UUID), `name`, `owner_id` (FK → User, nullable), `share_code` (UUID, nullable), `created_at`, `updated_at` (Note: `is_public` column exists in DB but is deprecated and no longer used)
 
 ### ListItem
 

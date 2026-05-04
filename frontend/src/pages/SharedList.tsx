@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { type ShoppingList, type ListItem as ListItemType } from '../types';
 import apiClient from '../api/client';
@@ -11,14 +11,9 @@ const SharedList: React.FC = () => {
   const [list, setList] = useState<ShoppingList | null>(null);
   const [loadingList, setLoadingList] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const initialFetchDone = useRef(false);
 
-  useEffect(() => {
-    if (shareCode) {
-      fetchSharedList();
-    }
-  }, [shareCode]);
-
-  const fetchSharedList = async (): Promise<void> => {
+  const fetchSharedList = useCallback(async (): Promise<void> => {
     try {
       setLoadingList(true);
       const response = await apiClient.get<ShoppingList>(`/lists/shared/${shareCode}`);
@@ -29,7 +24,14 @@ const SharedList: React.FC = () => {
     } finally {
       setLoadingList(false);
     }
-  };
+  }, [shareCode]);
+
+  useEffect(() => {
+    if (shareCode && !initialFetchDone.current) {
+      initialFetchDone.current = true;
+      fetchSharedList();
+    }
+  }, [shareCode, fetchSharedList]);
 
   const handleAddItem = async (name: string, quantity: number): Promise<void> => {
     if (!list) return;
@@ -45,9 +47,11 @@ const SharedList: React.FC = () => {
         ...list,
         items: [...list.items, response.data],
       });
-    } catch (err) {
-      console.error('Failed to add item:', err);
-      setError('Failed to add item');
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { status?: number; data?: { detail?: string } } };
+      const detail = axiosErr.response?.data?.detail;
+      console.error('Failed to add item:', { status: axiosErr.response?.status, detail });
+      setError(detail || 'Failed to add item');
     }
   };
 
@@ -69,9 +73,18 @@ const SharedList: React.FC = () => {
           item.id === itemId ? { ...item, is_checked: isChecked } : item
         ),
       });
-    } catch (err) {
-      console.error('Failed to update item:', err);
-      setError('Failed to update item');
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { status?: number; data?: { detail?: string } } };
+      const status = axiosErr.response?.status;
+      const detail = axiosErr.response?.data?.detail;
+      console.error('Failed to update item:', { status, detail, shareCode, itemId });
+      if (status === 401) {
+        setError('Not authorized. The share link may have expired.');
+      } else if (status === 404) {
+        setError('Item not found.');
+      } else {
+        setError(detail || 'Failed to update item');
+      }
     }
   };
 
@@ -86,9 +99,11 @@ const SharedList: React.FC = () => {
         ...list,
         items: list.items.filter((item) => item.id !== itemId),
       });
-    } catch (err) {
-      console.error('Failed to delete item:', err);
-      setError('Failed to delete item');
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { status?: number; data?: { detail?: string } } };
+      const detail = axiosErr.response?.data?.detail;
+      console.error('Failed to delete item:', { status: axiosErr.response?.status, detail });
+      setError(detail || 'Failed to delete item');
     }
   };
 
