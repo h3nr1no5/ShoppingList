@@ -17,15 +17,16 @@ os.environ["SECRET_KEY"] = "test-secret-key-for-testing-only-do-not-use-in-produ
 from dotenv import load_dotenv
 load_dotenv()  # loads from project root .env
 
-os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///./test_shopping_list.db"
+# Only set SQLite default if DATABASE_URL is not already set
+os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///./test_shopping_list.db")
 
 from database import get_db, Base
 from models import User, ShoppingList, ListItem
 from auth import get_password_hash, create_access_token
 from main import app
 
-# Create test engine
-TEST_DATABASE_URL = "sqlite+aiosqlite:///./test_shopping_list.db"
+# Use DATABASE_URL from environment (allows PostgreSQL testing)
+TEST_DATABASE_URL = os.environ["DATABASE_URL"]
 engine = create_async_engine(TEST_DATABASE_URL, echo=False)
 TestSessionLocal = async_sessionmaker(
     engine,

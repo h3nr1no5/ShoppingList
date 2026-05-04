@@ -3,7 +3,7 @@ Unit tests for Pydantic schemas.
 """
 import os
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pytest
 from pydantic import ValidationError
@@ -113,7 +113,7 @@ class TestShoppingListUpdate:
 
 class TestShoppingListResponse:
     def test_valid_response(self):
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         data = ShoppingListResponse(
             id=uuid.uuid4(),
             name="Groceries",
@@ -131,8 +131,8 @@ class TestShoppingListResponse:
             name = "Test"
             owner_id = uuid.uuid4()
             share_code = uuid.uuid4()
-            created_at = datetime.utcnow()
-            updated_at = datetime.utcnow()
+            created_at = datetime.now(timezone.utc)
+            updated_at = datetime.now(timezone.utc)
 
         mock = MockList()
         data = ShoppingListResponse.model_validate(mock)
@@ -141,7 +141,7 @@ class TestShoppingListResponse:
 
 class TestShoppingListWithItemsResponse:
     def test_with_empty_items(self):
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         data = ShoppingListWithItemsResponse(
             id=uuid.uuid4(),
             name="Groceries",
@@ -154,7 +154,7 @@ class TestShoppingListWithItemsResponse:
         assert data.items == []
 
     def test_with_items(self):
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         list_id = uuid.uuid4()
         item = ListItemResponse(
             id=uuid.uuid4(),
@@ -238,7 +238,7 @@ class TestListItemUpdate:
 
 class TestListItemResponse:
     def test_valid_response(self):
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         list_id = uuid.uuid4()
         data = ListItemResponse(
             id=uuid.uuid4(),

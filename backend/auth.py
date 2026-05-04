@@ -1,9 +1,11 @@
+from __future__ import annotations
 """
 Authentication logic including JWT token handling and password hashing.
 """
+
 import os
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from dataclasses import dataclass
@@ -63,7 +65,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login", auto_error=False)
 
 def create_access_token(user_id: uuid.UUID, email: str = "") -> str:
     """Create JWT access token."""
-    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode = {
         "sub": str(user_id),
         "email": email,
