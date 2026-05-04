@@ -17,11 +17,16 @@ cd frontend && bash run.sh       # installs deps, runs Vite dev server
 
 ## Backend Commands
 ```bash
-cd backend && pytest                         # run all tests (uses SQLite, not Postgres)
+cd backend && pytest                         # run all tests (requires PostgreSQL)
 cd backend && pytest tests/test_unit/        # unit tests only
 cd backend && pytest -m integration          # integration tests only
 cd backend && pytest -m security             # security tests only
 cd backend && pytest -v -k "test_login"      # run a single test by name
+```
+
+**PostgreSQL is required for all tests.** Start it with:
+```bash
+cd backend && docker compose up -d   # starts PostgreSQL in Docker
 ```
 
 ## Frontend Commands
@@ -35,7 +40,7 @@ cd frontend && npm run lint    # eslint
 
 - **`SECRET_KEY` is required at import time** — `auth.py` reads it on module load and raises `RuntimeError` if missing. Must be set in `.env` before starting the server or importing the app in tests. Generate with: `python -c 'import secrets; print(secrets.token_hex(32))'`. In production (Azure), stored as a container app secret.
 - **Registration requires invite code** — New user registration is protected by `REGISTRATION_KEY`. Set via env var or Azure secret.
-- **Tests use SQLite, not PostgreSQL** — `conftest.py` overrides `DATABASE_URL` to `sqlite+aiosqlite:///./test_shopping_list.db`. The test db file lives in the `backend/` root. No running Postgres needed for tests.
+- **Tests use PostgreSQL** — a running PostgreSQL instance is required (started via `docker compose up -d`).
 - **No migration system** — tables are auto-created on startup via `init_db()` (`Base.metadata.create_all`). Add new models directly to `models.py`.
 - **Vite proxies `/api` → `http://localhost:8000`** — the frontend dev server handles the API proxy. `VITE_API_URL` in `.env` is optional and rarely needed.
 - **Docker Compose runs Postgres** on port 5432 with `postgres:postgres` credentials. Database name: `shoppinglist`.
