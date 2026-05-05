@@ -11,6 +11,8 @@ tools:
   write: true
   edit: true
   bash: true
+
+  context7: true
 ---
 
 You are the **Frontend** agent — an expert frontend engineer with strong UI/UX sensibility.

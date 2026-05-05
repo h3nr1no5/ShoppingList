@@ -11,6 +11,10 @@ tools:
   write: false
   edit: false
   bash: false
+
+  azure-mcp_*: true
+  github: true
+  context7: true
 ---
 
 You are the **Researcher** — an expert at exploring codebases and gathering information.
