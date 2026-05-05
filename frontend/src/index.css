@@ -1116,6 +1116,22 @@ body {
   border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
 }
 
+.swipeable-edit-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 100px;
+  background-color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 20px;
+  z-index: 0;
+  border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+}
+
 .swipeable-content {
   position: relative;
   z-index: 1;

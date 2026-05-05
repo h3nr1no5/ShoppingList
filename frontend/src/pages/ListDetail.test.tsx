@@ -5,6 +5,7 @@ import ListDetail from './ListDetail';
 import { type ShoppingList } from '../types';
 import { AuthContext } from '../context/AuthContext';
 import { ThemeContext } from '../context/ThemeContext';
+import { ToastProvider } from '../context/ToastContext';
 
 // Mock the apiClient
 vi.mock('../api/client', async () => {
@@ -57,19 +58,21 @@ const renderWithAuth = (ui: React.ReactElement, isAuthenticated = true) => {
   return render(
     <BrowserRouter>
       <ThemeContext.Provider value={{ theme: 'light', toggleTheme: vi.fn() }}>
-        <AuthContext.Provider
-          value={{
-            isAuthenticated,
-            user: isAuthenticated ? { id: 'user-1', email: 'test@example.com' } : null,
-            token: isAuthenticated ? 'mock-token' : null,
-            login: vi.fn(),
-            register: vi.fn(),
-            logout: vi.fn(),
-            loading: false,
-          }}
-        >
-          {ui}
-        </AuthContext.Provider>
+        <ToastProvider>
+          <AuthContext.Provider
+            value={{
+              isAuthenticated,
+              user: isAuthenticated ? { id: 'user-1', email: 'test@example.com' } : null,
+              token: isAuthenticated ? 'mock-token' : null,
+              login: vi.fn(),
+              register: vi.fn(),
+              logout: vi.fn(),
+              loading: false,
+            }}
+          >
+            {ui}
+          </AuthContext.Provider>
+        </ToastProvider>
       </ThemeContext.Provider>
     </BrowserRouter>
   );

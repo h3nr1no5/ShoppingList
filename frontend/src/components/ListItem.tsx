@@ -148,8 +148,10 @@ const ListItem: React.FC<ListItemProps> = ({ item, onToggle, onDelete, onEdit })
     </div>
   );
 
-  return (
-    <Swipeable onSwipe={handleDelete}>
+  // When editing, render itemContent directly without Swipeable wrapper
+  // to prevent accidental swipe-to-delete when tapping save/cancel buttons
+  return isEditing ? itemContent : (
+    <Swipeable onSwipe={handleDelete} onSwipeRight={handleEdit}>
       {itemContent}
     </Swipeable>
   );
