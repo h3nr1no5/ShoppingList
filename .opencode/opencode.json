@@ -17,7 +17,7 @@
     },
     "azure-mcp": {
       "type": "local",           // or "remote" with URL
-      "command": ["npx", "-y", "@azure/mcp"],  // Adjust to your Azure MCP install method
+      "command": ["npx", "-y", "@azure/mcp@latest", "server", "start"],  // Adjust to your Azure MCP install method
       "enabled": true,
       // Add auth env vars if needed:
       "env": { "AZURE_SUBSCRIPTION_ID": "513c36b9-528b-43ae-a5e2-64d489e10120" }
