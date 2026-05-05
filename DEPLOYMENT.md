@@ -8,7 +8,7 @@ This guide covers deploying the shopping list app to Microsoft Azure.
 |-------------|--------------|
 | Azure CLI | `brew install azure-cli` |
 | Azure Developer CLI | `brew install azure-dev-cli` |
-| Node.js 18+ | `brew install node` |
+| Node.js 20+ | `brew install node` |
 | Python 3.11+ | `brew install python@3.11` |
 
 ## Quick Deploy
@@ -47,19 +47,19 @@ When running `azd up`, select:
 
 | Component | Azure Service | Runtime |
 |-----------|---------------|---------|
-| Frontend | App Service | Node 18 Alpine |
-| Backend API | App Service | Python 3.11 |
+| Frontend | Container Apps | Node 20 Alpine |
+| Backend API | Container Apps | Python 3.11 |
 | Database | Azure Database for PostgreSQL | PostgreSQL 15 |
 
 ## What Gets Created
 
-- **2x App Service** (Linux) - Frontend + Backend
-- **1x PostgreSQL Flexible Server** - Database
-- **1x App Service Plan** - B1 SKU
+- **2x Container Apps** - Frontend + Backend
+- **1x Container Apps Environment** - Shared environment
+- **1x PostgreSQL Flexible Server** - Database (B1ms SKU)
 
 ## Registration
 
-Registration is **open to everyone** — no invite code required. New users can register directly through the `/api/auth/register` endpoint.
+Registration requires an invite code. Set the `REGISTRATION_KEY` environment variable in the Container App configuration. New users must provide a valid invite code when registering via the `/api/auth/register` endpoint.
 
 ## After Deployment
 
@@ -101,12 +101,15 @@ cd backend && bash run.sh
 cd frontend && bash run.sh
 ```
 
-### Option 2: SQLite for Testing (No PostgreSQL Required)
+### Option 2: With Docker (for running tests)
 
-Tests use SQLite and don't require a running PostgreSQL instance:
+Tests require PostgreSQL. Start the test database using Docker:
 
 ```bash
-# Backend with SQLite (for testing only)
+# Start PostgreSQL container
+cd backend && docker compose up -d
+
+# Run tests
 cd backend && pytest
 
 # Frontend
@@ -121,11 +124,11 @@ Access:
 ## Troubleshooting
 
 ### Database Connection Issues
-- Verify `AZURE_POSTGRESQL_CONNECTIONSTRING` is set in App Service
+- Verify `DATABASE_URL` is set in the API Container App
 - Check firewall rules allow Azure services
 
 ### CORS Errors
-- Update `ALLOWED_ORIGINS` in App Service configuration
+- Update `ALLOWED_ORIGINS` in the API Container App configuration
 
 ### Build Failures
 - Check logs: `azd deploy --verbose`
@@ -134,9 +137,10 @@ Access:
 
 ## Costs
 
-Estimated monthly costs (B1 tier):
-- App Service (2x): ~$25/month
-- PostgreSQL Flexible Server: ~$30/month
-- **Total**: ~$55/month
+Estimated monthly costs (B1ms tier):
+- Container Apps (2x): ~$10/month
+- Container Apps Environment: ~$5/month
+- PostgreSQL Flexible Server: ~$25/month
+- **Total**: ~$40/month
 
 Use the [Azure Pricing Calculator](https://azure.microsoft.com/pricing/calculator/) for accurate estimates.

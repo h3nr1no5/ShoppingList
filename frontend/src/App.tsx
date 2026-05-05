@@ -2,6 +2,8 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { useAuth } from './hooks/useAuth';
 import { ThemeProvider } from './context/ThemeContext';
+import { ToastProvider, useToastContext } from './context/ToastContext';
+import { ToastContainer } from './components/ToastContainer';
 import Home from './pages/Home';
 import ListDetail from './pages/ListDetail';
 import SharedList from './pages/SharedList';
@@ -56,13 +58,22 @@ const AppRoutes: React.FC = () => {
   );
 };
 
+// ToastContainer wrapper to access context
+const ToastContainerWrapper: React.FC = () => {
+  const { toasts, dismissToast } = useToastContext();
+  return <ToastContainer toasts={toasts} dismissToast={dismissToast} />;
+};
+
 // Main App component
 const App: React.FC = () => {
   return (
     <BrowserRouter>
       <AuthProvider>
         <ThemeProvider>
-          <AppRoutes />
+          <ToastProvider>
+            <AppRoutes />
+            <ToastContainerWrapper />
+          </ToastProvider>
         </ThemeProvider>
       </AuthProvider>
     </BrowserRouter>

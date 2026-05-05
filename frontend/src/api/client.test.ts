@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { AxiosInstance } from 'axios';
 
 // Mock import.meta at the top level
 vi.mock('import.meta', () => ({

@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 jobs:
-  test:
+  backend-test:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -49,3 +49,56 @@ jobs:
         env:
           SECRET_KEY: test-secret-key-for-ci
           REGISTRATION_KEY: test-registration-key
+
+  frontend-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run linter
+        run: npm run lint
+
+      - name: Run tests
+        run: npm run test:run
+        env:
+          VITE_API_URL: ""  # Tests use vitest.config.ts setting, but explicitly set here for clarity
+
+  frontend-build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build frontend (verify VITE_API_URL handling)
+        run: |
+          # Create a .env file with a test API URL to verify build works
+          echo "VITE_API_URL=https://test-api.example.com" > .env
+          npm run build
+        env:
+          # VITE_API_URL is read from .env file by Vite during build
+          VITE_API_URL: https://test-api.example.com

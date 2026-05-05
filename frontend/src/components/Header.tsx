@@ -1,14 +1,32 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
+import { useApiHealth } from '../hooks/useApiHealth';
+import { useToastContext } from '../context/ToastContext';
 
 const Header: React.FC = () => {
   const { user, isAuthenticated, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { showToast, dismissAll } = useToastContext();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // Wrap callbacks in useCallback to stabilize references for useApiHealth
+  const handleDisconnect = useCallback(() => {
+    showToast('API Disconnected', 'error');
+  }, [showToast]);
+
+  const handleReconnect = useCallback(() => {
+    showToast('API Reconnected', 'success');
+    dismissAll();
+  }, [showToast, dismissAll]);
+
+  const { status } = useApiHealth({
+    onDisconnect: handleDisconnect,
+    onReconnect: handleReconnect,
+  });
 
   const handleLogout = (): void => {
     logout();
@@ -50,10 +68,24 @@ const Header: React.FC = () => {
   return (
     <header className="header">
       <div className="header-container">
-        <Link to="/" className="logo" onClick={closeMenu}>
-          <span className="logo-icon">🛒</span>
-          <span className="logo-text">Shopping List</span>
-        </Link>
+        <div className="header-left">
+          <Link to="/" className="logo" onClick={closeMenu}>
+            <span className="logo-icon">🛒</span>
+            <span className="logo-text">Shopping List</span>
+          </Link>
+
+          {/* Status dot - always visible in header, including mobile */}
+          {status !== 'checking' && (
+            <div
+              className="connection-status"
+              title={status === 'connected' ? 'API Connected' : 'API Disconnected'}
+              role="status"
+              aria-live="polite"
+            >
+              <span className={`status-dot ${status === 'connected' ? 'connected' : 'pulse'}`} />
+            </div>
+          )}
+        </div>
 
         {/* Desktop nav — hidden on mobile via CSS */}
         <nav className="nav">
