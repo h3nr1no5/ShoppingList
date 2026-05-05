@@ -8,7 +8,7 @@ export interface ShoppingList {
   name: string;
   owner_id: string | null;
   share_code: string | null;
-  items: ListItem[];
+  items?: ListItem[] | null;
   created_at: string;
   updated_at: string;
 }

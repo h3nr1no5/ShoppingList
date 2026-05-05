@@ -45,7 +45,7 @@ const SharedList: React.FC = () => {
       });
       setList({
         ...list,
-        items: [...list.items, response.data],
+        items: [...(list.items ?? []), response.data],
       });
     } catch (err: unknown) {
       const axiosErr = err as { response?: { status?: number; data?: { detail?: string } } };
@@ -61,18 +61,38 @@ const SharedList: React.FC = () => {
   ): Promise<void> => {
     if (!list) return;
 
+    // Optimistically update UI using functional state
+    setList(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        items: (prev.items ?? []).map(item =>
+          item.id === itemId ? { ...item, is_checked: isChecked } : item
+        )
+      };
+    });
+
     try {
       await apiClient.put(`/items/${itemId}`, {
         is_checked: isChecked,
       }, {
         params: { share_code: shareCode },
       });
-      fetchSharedList(); // Refresh to get updated_at
     } catch (err: unknown) {
       const axiosErr = err as { response?: { status?: number; data?: { detail?: string } } };
       const status = axiosErr.response?.status;
       const detail = axiosErr.response?.data?.detail;
       console.error('Failed to update item:', { status, detail, shareCode, itemId });
+      // Revert on error
+      setList(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          items: (prev.items ?? []).map(item =>
+            item.id === itemId ? { ...item, is_checked: !isChecked } : item
+          )
+        };
+      });
       if (status === 401) {
         setError('Not authorized. The share link may have expired.');
       } else if (status === 404) {
@@ -92,7 +112,7 @@ const handleDeleteItem = async (itemId: string): Promise<void> => {
     });
     setList({
       ...list,
-      items: list.items.filter((item) => item.id !== itemId),
+      items: (list.items ?? []).filter((item) => item.id !== itemId),
     });
   } catch (err: unknown) {
     const axiosErr = err as { response?: { status?: number; data?: { detail?: string } } };
@@ -102,21 +122,44 @@ const handleDeleteItem = async (itemId: string): Promise<void> => {
   }
 };
 
-  const handleEditItem = async (itemId: string, name: string, quantity: number): Promise<void> => {
+const handleEditItem = async (itemId: string, name: string, quantity: number): Promise<void> => {
     if (!list) return;
+
+    // Store original item for revert
+    const originalItem = (list.items ?? []).find((item) => item.id === itemId);
+    
+    // Optimistically update UI using functional state
+    setList(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        items: (prev.items ?? []).map(item =>
+          item.id === itemId ? { ...item, name, quantity } : item
+        )
+      };
+    });
 
     try {
       await apiClient.put(`/items/${itemId}`, { name, quantity }, {
         params: { share_code: shareCode },
       });
-      // Refresh the shared list to show updated data
-      const response = await apiClient.get<ShoppingList>(`/lists/shared/${shareCode}`);
-      setList(response.data);
     } catch (err: unknown) {
       const axiosErr = err as { response?: { status?: number; data?: { detail?: string } } };
       const status = axiosErr.response?.status;
       const detail = axiosErr.response?.data?.detail;
       console.error('Failed to edit item:', { status, detail, shareCode, itemId });
+      // Revert on error
+      if (originalItem) {
+        setList(prev => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            items: (prev.items ?? []).map(item =>
+              item.id === itemId ? originalItem : item
+            )
+          };
+        });
+      }
       if (status === 401) {
         setError('Not authorized. The share link may have expired.');
       } else if (status === 404) {
@@ -149,8 +192,8 @@ const handleDeleteItem = async (itemId: string): Promise<void> => {
     );
   }
 
-  const checkedCount = list.items.filter((item) => item.is_checked).length;
-  const totalCount = list.items.length;
+  const checkedCount = (list.items ?? []).filter((item) => item.is_checked).length;
+  const totalCount = (list.items ?? []).length;
 
   return (
     <div className="page">
@@ -178,13 +221,13 @@ const handleDeleteItem = async (itemId: string): Promise<void> => {
         <div className="items-list">
           <ItemForm onSubmit={handleAddItem} />
 
-          {list.items.length === 0 ? (
+          {(list.items ?? []).length === 0 ? (
             <div className="empty-state">
               <p>No items in this list.</p>
               <p>Add your first item above!</p>
             </div>
           ) : (
-            list.items
+            (list.items ?? [])
               .sort((a, b) => a.sort_order - b.sort_order)
               .map((item) => (
                 <ListItem
