@@ -156,6 +156,12 @@ body {
   justify-content: space-between;
 }
 
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
 .logo {
   display: flex;
   align-items: center;
@@ -1289,6 +1295,10 @@ body {
 
 .status-dot.pulse {
   animation: pulse 1.5s ease-in-out infinite;
+}
+
+.status-dot.connected {
+  background-color: var(--color-success);
 }
 
 @keyframes pulse {

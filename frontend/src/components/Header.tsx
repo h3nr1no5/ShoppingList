@@ -68,10 +68,24 @@ const Header: React.FC = () => {
   return (
     <header className="header">
       <div className="header-container">
-        <Link to="/" className="logo" onClick={closeMenu}>
-          <span className="logo-icon">🛒</span>
-          <span className="logo-text">Shopping List</span>
-        </Link>
+        <div className="header-left">
+          <Link to="/" className="logo" onClick={closeMenu}>
+            <span className="logo-icon">🛒</span>
+            <span className="logo-text">Shopping List</span>
+          </Link>
+
+          {/* Status dot - always visible in header, including mobile */}
+          {status !== 'checking' && (
+            <div
+              className="connection-status"
+              title={status === 'connected' ? 'API Connected' : 'API Disconnected'}
+              role="status"
+              aria-live="polite"
+            >
+              <span className={`status-dot ${status === 'connected' ? 'connected' : 'pulse'}`} />
+            </div>
+          )}
+        </div>
 
         {/* Desktop nav — hidden on mobile via CSS */}
         <nav className="nav">
@@ -83,16 +97,6 @@ const Header: React.FC = () => {
           >
             {theme === 'light' ? '🌙' : '☀️'}
           </button>
-          {status === 'disconnected' && (
-            <div
-              className="connection-status"
-              title="API Disconnected"
-              role="status"
-              aria-live="polite"
-            >
-              <span className="status-dot pulse" />
-            </div>
-          )}
           {isAuthenticated ? (
             <div className="user-menu">
               <span className="user-email">{user?.email}</span>

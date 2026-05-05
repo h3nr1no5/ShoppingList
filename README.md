@@ -8,7 +8,7 @@ A full-stack shopping list application with sharing capabilities. Built with Fas
 |-------|-----------|
 | **Backend** | FastAPI, SQLAlchemy 2.0 (async), Uvicorn |
 | **Frontend** | React 19, TypeScript, Vite, React Router, Axios |
-| **Database** | PostgreSQL (async via asyncpg), SQLite (tests) |
+| **Database** | PostgreSQL (async via asyncpg) |
 | **Auth** | JWT (python-jose), bcrypt (passlib) |
 | **Infra** | Azure Container Apps, Azure Database for PostgreSQL, Bicep |
 | **CI/Testing** | pytest, pytest-asyncio, httpx, ESLint |
@@ -19,7 +19,7 @@ A full-stack shopping list application with sharing capabilities. Built with Fas
 ShoppingList/
 ├── AGENTS.md              # Agent instructions & command reference
 ├── DEPLOYMENT.md          # Azure deployment guide
-├── PROJECT.md             # Project overview (this file)
+├── README.md              # Project overview (this file)
 ├── azure.yaml             # Azure Developer CLI configuration
 ├── backend/               # FastAPI backend (Python)
 │   ├── main.py            # App entry point & all API routes
@@ -174,15 +174,17 @@ cd frontend && bash run.sh         # installs deps, starts Vite dev server on :5
 
 ## Testing
 
+Tests require PostgreSQL — conftest.py uses PostgreSQL (not SQLite). Start PostgreSQL via `cd backend && docker compose up -d` before running tests.
+
 ```bash
-cd backend && pytest                         # all tests (SQLite, isolated)
+cd backend && pytest                         # all tests
 cd backend && pytest tests/test_unit/        # unit tests only
 cd backend && pytest -m integration          # integration tests only
 cd backend && pytest -m security             # security tests only
-cd backend && pytest -v -k "test_name"       # single test
+cd backend && pytest -v -k "test_name"         # single test
 ```
 
-Tests use SQLite (not PostgreSQL). Fixtures in `conftest.py` provide authenticated clients, test data, and automatic DB cleanup.
+Fixtures in `conftest.py` provide authenticated clients, test data, and automatic DB cleanup.
 
 ## Azure Deployment
 
@@ -208,4 +210,3 @@ See `DEPLOYMENT.md` for full deployment guide.
 - **Flexible access model** — Owner, share code holder, public list, or anonymous list
 - **Async throughout** — Async SQLAlchemy, asyncpg, async FastAPI
 - **Vite proxy for dev** — Frontend dev server proxies `/api` → `http://localhost:8000`
-- **SQLite for tests** — Fast, isolated test runs without PostgreSQL dependency
