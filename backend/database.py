@@ -2,13 +2,14 @@
 Database configuration module.
 Handles PostgreSQL connection including Azure PostgreSQL connection string format.
 """
+import logging
 import os
-from typing import Optional
-from urllib.parse import unquote
 
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import declarative_base
-from sqlalchemy import URL
+
+
+logger = logging.getLogger(__name__)
 
 
 Base = declarative_base()
@@ -16,51 +17,41 @@ Base = declarative_base()
 
 def get_database_url() -> str:
     """
-    Build database URL from environment variables.
-    Supports both regular PostgreSQL and Azure PostgreSQL connection string.
+    Get database URL from DATABASE_URL environment variable.
+    Fallback to Azure connection string if DATABASE_URL is not set.
     """
-    # Check for Azure PostgreSQL connection string first
-    azure_connection_string = os.getenv("AZURE_POSTGRESQL_CONNECTIONSTRING")
+    # First try DATABASE_URL (set in Container App)
+    database_url = os.getenv("DATABASE_URL")
+    if database_url:
+        # Remove sslmode from query params (we handle SSL in engine args)
+        if "?" in database_url:
+            base, params = database_url.split("?", 1)
+            # Filter out sslmode
+            params = "&".join(
+                p for p in params.split("&")
+                if not p.startswith("sslmode=")
+            )
+            database_url = f"{base}?{params}" if params else base
+        logger.info(f"Using DATABASE_URL (cleaned): {database_url[:50]}...")
+        return database_url
     
+    # Fallback to Azure connection string
+    azure_connection_string = os.getenv("AZURE_POSTGRESQL_CONNECTIONSTRING")
     if azure_connection_string:
-        # Parse Azure format: postgresql://user:password@host:port/dbname?sslmode=require
-        # Replace postgresql:// with postgresql+asyncpg:// for async driver
+        # Convert to asyncpg format
         db_url = azure_connection_string.replace("postgresql://", "postgresql+asyncpg://")
-        
-        # URL decode user and password in case they contain special characters
-        # Extract user:password@host:port/dbname?sslmode=require
-        if "@" in db_url:
-            scheme_part, host_part = db_url.split("@", 1)
-            # Remove sslmode query param - we pass SSL as engine arg instead
-            if "?" in host_part:
-                host_port_db, query_params = host_part.split("?", 1)
-                # Filter out sslmode as we'll handle SSL in engine args
-                query_params = "&".join(p for p in query_params.split("&") if not p.startswith("sslmode="))
-                if query_params:
-                    host_part = f"{host_port_db}?{query_params}"
-                else:
-                    host_part = host_port_db
-            else:
-                host_part = host_part
-            
-            host_port_db = host_part
-            host, port_db = host_port_db.split("/", 1)
-            host, port = host.split(":", 1)
-            db_name = port_db
-            
-            # Get user and password from scheme part
-            # postgresql+asyncpg://user:password -> user:password
-            auth_part = scheme_part.replace("postgresql+asyncpg://", "")
-            user, password = auth_part.split(":", 1)
-            
-            # Rebuild URL with decoded credentials (without sslmode - will be added as engine arg)
-            db_url = f"postgresql+asyncpg://{unquote(user)}:{unquote(password)}@{host}:{port}/{db_name}"
-        
+        # Remove sslmode from URL (we handle SSL in engine args)
+        if "?" in db_url:
+            base, params = db_url.split("?", 1)
+            params = "&".join(p for p in params.split("&") if not p.startswith("sslmode="))
+            db_url = f"{base}?{params}" if params else base
+        logger.info(f"Using AZURE_POSTGRESQL_CONNECTIONSTRING (converted): {db_url[:50]}...")
         return db_url
     
-    # Use regular DATABASE_URL environment variable
-    database_url = os.getenv("DATABASE_URL", "postgresql+asyncpg://postgres:postgres@localhost:5432/shoppinglist")
-    return database_url
+    # Default fallback
+    default_url = "postgresql+asyncpg://postgres:postgres@localhost:5432/shoppinglist"
+    logger.warning(f"No database URL found, using default: {default_url[:50]}...")
+    return default_url
 
 
 # Create async engine
@@ -108,8 +99,20 @@ async def init_db():
     """
     Initialize database tables.
     """
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    logger.info(f"Initializing database tables... (DATABASE_URL starts with: {DATABASE_URL[:30]}...)")
+    try:
+        async with engine.begin() as conn:
+            # Log what tables will be created
+            table_names = [table.name for table in Base.metadata.tables.values()]
+            logger.info(f"Tables to create (if not exist): {table_names}")
+
+            await conn.run_sync(Base.metadata.create_all)
+
+        logger.info("SUCCESS: Database tables initialized")
+    except Exception as e:
+        logger.error(f"ERROR: Failed to initialize database: {e}")
+        logger.error(f"DATABASE_URL starts with: {DATABASE_URL[:50]}...")
+        raise
 
 
 async def drop_db():
