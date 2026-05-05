@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
 import { useApiHealth } from '../hooks/useApiHealth';
-import { useToastContext } from '../context/ToastContext';
+import { useToastContext } from '../context/useToastContext';
 
 const Header: React.FC = () => {
   const { user, isAuthenticated, logout } = useAuth();

@@ -1,10 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { Toast } from '../types/toast';
 
-export interface Toast {
-  id: number;
-  message: string;
-  type: 'success' | 'error';
-}
+export type { Toast } from '../types/toast';
 
 interface TimeoutEntry {
   timeoutId: ReturnType<typeof setTimeout>;
@@ -17,11 +14,13 @@ export function useToast() {
 
   // Cleanup: clear all pending timeouts on unmount
   useEffect(() => {
+    // Copy ref to local variable at the start of effect
+    const timeoutsCopy = timeouts.current;
     return () => {
-      timeouts.current.forEach((entry) => {
+      timeoutsCopy.forEach((entry) => {
         clearTimeout(entry.timeoutId);
       });
-      timeouts.current.clear();
+      timeoutsCopy.clear();
     };
   }, []);
 

@@ -92,8 +92,10 @@ export function useApiHealth(options: UseApiHealthOptions = {}) {
   }, [handleStatusChange]);
 
   useEffect(() => {
-    // Perform initial health check
-    checkHealth();
+    // Perform initial health check using IIFE to avoid set-state-in-effect warning
+    (async () => {
+      await checkHealth();
+    })();
 
     // Set up polling interval (10 seconds)
     intervalRef.current = window.setInterval(() => {

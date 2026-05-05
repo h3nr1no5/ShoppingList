@@ -1,6 +1,6 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach, SpyInstance } from 'vitest';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter } from 'react-router-dom';
 import ListDetail from './ListDetail';
 import { type ShoppingList } from '../types';
 import { AuthContext } from '../context/AuthContext';
