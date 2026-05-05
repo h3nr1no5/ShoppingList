@@ -70,14 +70,34 @@ const ListDetail: React.FC = () => {
   ): Promise<void> => {
     if (!list) return;
 
+    // Optimistically update UI using functional state
+    setList(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        items: (prev.items ?? []).map(item =>
+          item.id === itemId ? { ...item, is_checked: isChecked } : item
+        )
+      };
+    });
+
     try {
       await apiClient.put(`/items/${itemId}`, {
         is_checked: isChecked,
       });
-      fetchList(); // Refresh to get updated_at
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Failed to update item:', err);
       setError('Failed to update item');
+      // Revert on error
+      setList(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          items: (prev.items ?? []).map(item =>
+            item.id === itemId ? { ...item, is_checked: !isChecked } : item
+          )
+        };
+      });
     }
   };
 
@@ -96,15 +116,40 @@ const ListDetail: React.FC = () => {
     }
   };
 
-  const handleEditItem = async (itemId: string, name: string, quantity: number): Promise<void> => {
+const handleEditItem = async (itemId: string, name: string, quantity: number): Promise<void> => {
     if (!list) return;
+
+    // Store original item for revert
+    const originalItem = (list.items ?? []).find((item) => item.id === itemId);
+    
+    // Optimistically update UI using functional state
+    setList(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        items: (prev.items ?? []).map(item =>
+          item.id === itemId ? { ...item, name, quantity } : item
+        )
+      };
+    });
 
     try {
       await apiClient.put(`/items/${itemId}`, { name, quantity });
-      fetchList(); // Refresh the list to show updated data
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Failed to edit item:', err);
       setError('Failed to edit item');
+      // Revert on error
+      if (originalItem) {
+        setList(prev => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            items: (prev.items ?? []).map(item =>
+              item.id === itemId ? originalItem : item
+            )
+          };
+        });
+      }
     }
   };
 
@@ -170,8 +215,8 @@ const ListDetail: React.FC = () => {
     );
   }
 
-  const checkedCount = list.items?.filter((item) => item.is_checked).length ?? 0;
-  const totalCount = list.items?.length ?? 0;
+  const checkedCount = (list.items ?? []).filter((item) => item.is_checked).length;
+  const totalCount = (list.items ?? []).length;
 
   return (
     <div className="page">
@@ -233,7 +278,7 @@ const ListDetail: React.FC = () => {
         <div className="items-list">
           <ItemForm onSubmit={handleAddItem} />
 
-          {(list.items?.length ?? 0) === 0 ? (
+          {(list.items ?? []).length === 0 ? (
             <div className="empty-state">
               <p>No items in this list.</p>
               <p>Add your first item above!</p>
