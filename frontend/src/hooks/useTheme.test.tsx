@@ -264,7 +264,7 @@ describe('useTheme', () => {
     it('updates localStorage when toggling theme', async () => {
       let capturedToggle: (() => void) | undefined;
 
-      const { rerender } = render(
+      render(
         <ThemeProvider>
           <TestComponent
             onTheme={(_, toggle) => {
