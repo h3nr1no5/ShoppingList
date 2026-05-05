@@ -8,6 +8,24 @@
         "CONTEXT7_API_KEY": "{env:ctx7sk-ef00bbd6-37eb-4f48-b6d1-7ee1a21501be}"
       },
       "enabled": true
+    },
+    "github": {
+      "type": "remote",
+      "url": "https://github.com/mcp",  // or official remote endpoint
+      "enabled": true
+      // OAuth headers as needed
+    },
+    "azure-mcp": {
+      "type": "local",           // or "remote" with URL
+      "command": ["npx", "-y", "@azure/mcp"],  // Adjust to your Azure MCP install method
+      "enabled": true,
+      // Add auth env vars if needed:
+      "env": { "AZURE_SUBSCRIPTION_ID": "513c36b9-528b-43ae-a5e2-64d489e10120" }
+    },
+    "azure-devops": {
+      "type": "local",
+      "command": ["npx", "-y", "@rxreyn3/azure-devops-mcp@latest"],
+      "enabled": true
     }
   },
   "plugin": ["opencode-mem"],

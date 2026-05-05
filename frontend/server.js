@@ -2,6 +2,7 @@ import express from 'express';
 import helmet from 'helmet';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { createProxyMiddleware } from 'http-proxy-middleware';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -30,18 +31,29 @@ app.use(helmet({
   },
 }));
 
-// Serve static files with security options
+// Serve static files
 app.use(express.static(path.join(__dirname, 'dist'), {
   dotfiles: 'ignore',
   index: false,
   maxAge: '1d',
 }));
 
-// SPA fallback - serve index.html for all non-API routes (for React Router)
-// Use middleware approach for path-to-regexp v6+ compatibility
+// Proxy API requests to backend - Express strips /api prefix, so we add it back
+app.use('/api', createProxyMiddleware({
+  target: apiUrl,
+  changeOrigin: true,
+  pathRewrite: (path, req) => {
+    // Express stripped /api, so path is /auth/login instead of /api/auth/login
+    // Add /api back so backend receives the full path
+    return '/api' + path;
+  },
+}));
+
+// SPA fallback - serve index.html for all non-API routes
 app.use((req, res, next) => {
+  // If it's an API request that wasn't handled, return 404
   if (req.path.startsWith('/api')) {
-    return next();
+    return res.status(404).json({ detail: "API endpoint not found" });
   }
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
