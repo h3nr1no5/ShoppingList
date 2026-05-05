@@ -145,6 +145,12 @@ resource webContainerApp 'Microsoft.App/containerApps@2022-03-01' = {
           passwordSecretRef: 'acr-password'
         }
       ]
+      env: [
+        {
+          name: 'VITE_API_URL'
+          value: 'https://${apiContainerApp.properties.configuration.ingress.fqdn}'
+        }
+      ]
     }
     template: {
       containers: [

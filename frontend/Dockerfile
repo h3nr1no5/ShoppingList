@@ -11,6 +11,7 @@ RUN npm install
 COPY . .
 
 # Build the frontend (this runs tsc and vite build)
+# VITE_API_URL is read from .env by Vite (written by infra/hooks/prepackage.sh)
 RUN npm run build
 
 # Production stage

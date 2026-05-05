@@ -7,6 +7,11 @@ infra:
   path: infra
   module: main.bicep
 
+hooks:
+  prepackage:
+    shell: sh
+    run: ./infra/hooks/prepackage.sh
+
 services:
   web:
     project: ./frontend

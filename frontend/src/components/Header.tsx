@@ -1,14 +1,32 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
+import { useApiHealth } from '../hooks/useApiHealth';
+import { useToastContext } from '../context/ToastContext';
 
 const Header: React.FC = () => {
   const { user, isAuthenticated, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { showToast, dismissAll } = useToastContext();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // Wrap callbacks in useCallback to stabilize references for useApiHealth
+  const handleDisconnect = useCallback(() => {
+    showToast('API Disconnected', 'error');
+  }, [showToast]);
+
+  const handleReconnect = useCallback(() => {
+    showToast('API Reconnected', 'success');
+    dismissAll();
+  }, [showToast, dismissAll]);
+
+  const { status } = useApiHealth({
+    onDisconnect: handleDisconnect,
+    onReconnect: handleReconnect,
+  });
 
   const handleLogout = (): void => {
     logout();
@@ -65,6 +83,16 @@ const Header: React.FC = () => {
           >
             {theme === 'light' ? '🌙' : '☀️'}
           </button>
+          {status === 'disconnected' && (
+            <div
+              className="connection-status"
+              title="API Disconnected"
+              role="status"
+              aria-live="polite"
+            >
+              <span className="status-dot pulse" />
+            </div>
+          )}
           {isAuthenticated ? (
             <div className="user-menu">
               <span className="user-email">{user?.email}</span>

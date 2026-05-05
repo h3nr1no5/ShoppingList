@@ -2,7 +2,9 @@ node_modules/
 dist/
 .vite/
 *.log
-.env
+# Note: .env is NOT ignored - prepackage.sh writes it before Docker build
+# .env.local IS ignored (local dev only)
+.env.local
 .env.*
 !.env.example
 .git/
