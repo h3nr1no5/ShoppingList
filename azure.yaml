@@ -8,9 +8,15 @@ infra:
   module: main.bicep
 
 hooks:
-  prepackage:
+  prebuild:
     shell: sh
     run: ./infra/hooks/prepackage.sh
+
+  postdeploy:
+    shell: sh
+    run: ./infra/hooks/verify-deployment.sh
+    continueOnError: false  # Fail deployment if verification fails
+  
 
 services:
   web:
