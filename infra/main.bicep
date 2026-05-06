@@ -14,6 +14,14 @@ param postgresAdminLogin string
 @secure()
 param postgresAdminPassword string
 
+@description('JWT secret key for API')
+@secure()
+param secretKey string
+
+@description('Registration invite code')
+@secure()
+param registrationKey string
+
 @description('API container image')
 param apiImage string = 'nginx:latest'
 
@@ -73,11 +81,11 @@ resource apiContainerApp 'Microsoft.App/containerApps@2022-03-01' = {
       secrets: [
         {
           name: 'secret-key'
-          value: 'CHANGE_ME_SET_SECRET_KEY_IN_AZURE_PORTAL'
+          value: secretKey
         }
         {
           name: 'registration-key'
-          value: 'CHANGE_ME_SET_REGISTRATION_KEY_IN_AZURE_PORTAL'
+          value: registrationKey
         }
       ]
       env: [

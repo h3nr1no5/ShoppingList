@@ -23,6 +23,18 @@ function formatRelativeTime(dateString: string): string {
   return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
+/**
+ * Clamps a quantity string to valid range [1, 9999].
+ * Invalid input (non-numeric, negative, etc.) returns 1.
+ * Values above 9999 are clamped to 9999.
+ */
+const clampQuantity = (value: string): number => {
+  const parsed = parseInt(value, 10);
+  if (isNaN(parsed) || parsed < 1) return 1;
+  if (parsed > 9999) return 9999;
+  return parsed;
+};
+
 interface ListItemProps {
   item: ListItemType;
   onToggle: (id: string, isChecked: boolean) => void;
@@ -34,6 +46,7 @@ const ListItem: React.FC<ListItemProps> = ({ item, onToggle, onDelete, onEdit })
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(item.name);
   const [editQuantity, setEditQuantity] = useState(item.quantity);
+  const [quantityInputValue, setQuantityInputValue] = useState(String(item.quantity));
 
   const handleCheckboxChange = (): void => {
     onToggle(item.id, !item.is_checked);
@@ -48,6 +61,7 @@ const ListItem: React.FC<ListItemProps> = ({ item, onToggle, onDelete, onEdit })
   const handleEdit = (): void => {
     setEditName(item.name);
     setEditQuantity(item.quantity);
+    setQuantityInputValue(String(item.quantity));
     setIsEditing(true);
   };
 
@@ -62,6 +76,20 @@ const ListItem: React.FC<ListItemProps> = ({ item, onToggle, onDelete, onEdit })
     setIsEditing(false);
     setEditName(item.name);
     setEditQuantity(item.quantity);
+    setQuantityInputValue(String(item.quantity));
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent): void => {
+    if (e.key === 'Enter' || e.key === 'Escape') {
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (e.key === 'Enter') {
+        handleSave();
+      } else if (e.key === 'Escape') {
+        handleCancel();
+      }
+    }
   };
 
   const itemContent = (
@@ -95,40 +123,61 @@ const ListItem: React.FC<ListItemProps> = ({ item, onToggle, onDelete, onEdit })
 
       {/* Edit mode: inline form */}
       {isEditing ? (
-        <div className="edit-form">
+        <form
+          className="edit-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSave();
+          }}
+          onKeyDown={handleKeyDown}
+        >
           <input
             type="text"
             value={editName}
             onChange={(e) => setEditName(e.target.value)}
             className="edit-input"
             autoFocus
+            aria-label="Item name"
           />
           <input
-            type="number"
+            type="text"
+            inputMode="numeric"
             min="1"
             max="9999"
-            value={editQuantity}
+            value={quantityInputValue}
             onChange={(e) => {
-              const val = parseInt(e.target.value);
-              setEditQuantity(isNaN(val) ? 1 : val);
+              setQuantityInputValue(e.target.value);
+              setEditQuantity(clampQuantity(e.target.value));
+            }}
+            onBlur={() => {
+              const clamped = clampQuantity(quantityInputValue);
+              setEditQuantity(clamped);
+              setQuantityInputValue(String(clamped));
             }}
             className="edit-quantity-input"
+            aria-label="Quantity"
+            aria-valuemin={1}
+            aria-valuemax={9999}
+            aria-valuenow={editQuantity}
           />
           <button
-            onClick={handleSave}
+            type="submit"
             className="btn-icon btn-save-item"
             title="Save changes"
+            aria-label="Save changes"
           >
             ✓
           </button>
           <button
+            type="button"
             onClick={handleCancel}
             className="btn-icon btn-cancel-item"
             title="Cancel editing"
+            aria-label="Cancel editing"
           >
             ✕
           </button>
-        </div>
+        </form>
       ) : (
         <>
           <button
