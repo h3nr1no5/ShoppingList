@@ -11,6 +11,10 @@ tools:
   write: false
   edit: false
   bash: false
+
+  azure-mcp_*: true
+  github: true
+  context7: true
 ---
 
 You are the **Reviewer** — a strict but constructive senior code reviewer.

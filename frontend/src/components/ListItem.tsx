@@ -75,21 +75,23 @@ const ListItem: React.FC<ListItemProps> = ({ item, onToggle, onDelete, onEdit })
         <span className="checkbox-custom"></span>
       </label>
 
-      <div className="list-item-content">
-        <span className={`item-name ${item.is_checked ? 'checked' : ''}`}>
-          {item.name}
-        </span>
-        {item.quantity > 1 && !isEditing && (
-          <span className="item-quantity">x{item.quantity}</span>
-        )}
-        
-        {/* Last updated timestamp - shown as footer note */}
-        {(item.updated_at || item.created_at) && !isEditing && (
-          <div className="item-timestamp">
-            {formatRelativeTime(item.updated_at || item.created_at)}
-          </div>
-        )}
-      </div>
+      {!isEditing && (
+        <div className="list-item-content">
+          <span className={`item-name ${item.is_checked ? 'checked' : ''}`}>
+            {item.name}
+          </span>
+          {item.quantity > 1 && (
+            <span className="item-quantity">x{item.quantity}</span>
+          )}
+          
+          {/* Last updated timestamp - shown as footer note */}
+          {(item.updated_at || item.created_at) && (
+            <div className="item-timestamp">
+              {formatRelativeTime(item.updated_at || item.created_at)}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Edit mode: inline form */}
       {isEditing ? (
@@ -148,8 +150,10 @@ const ListItem: React.FC<ListItemProps> = ({ item, onToggle, onDelete, onEdit })
     </div>
   );
 
-  return (
-    <Swipeable onSwipe={handleDelete}>
+  // When editing, render itemContent directly without Swipeable wrapper
+  // to prevent accidental swipe-to-delete when tapping save/cancel buttons
+  return isEditing ? itemContent : (
+    <Swipeable onSwipe={handleDelete} onSwipeRight={handleEdit}>
       {itemContent}
     </Swipeable>
   );

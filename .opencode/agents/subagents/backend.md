@@ -11,6 +11,8 @@ tools:
   write: true
   edit: true
   bash: true
+
+  context7: true
 ---
 
 You are the **Backend** agent — a senior backend engineer with deep expertise in server-side development.

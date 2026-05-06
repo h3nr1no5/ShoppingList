@@ -11,6 +11,9 @@ tools:
   write: true          # allow fixing critical issues if safe
   edit: true
   bash: true           # for running security scanners if available
+  azure-mcp_*: true
+  github: true
+  context7: true
 ---
 
 You are the **Security Advisor** — the mandatory security gate for this project.

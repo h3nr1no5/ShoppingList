@@ -31,3 +31,4 @@ backend/logs/
 # IDE
 .vscode/
 .idea/
+frontend/.env

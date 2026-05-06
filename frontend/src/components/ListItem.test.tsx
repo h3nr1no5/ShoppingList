@@ -5,8 +5,14 @@ import { type ListItem as ListItemType } from '../types';
 
 // Mock the Swipeable component
 vi.mock('./Swipeable', () => ({
-  default: ({ children, onSwipe }: { children: React.ReactNode; onSwipe: () => void }) => (
-    <div data-testid="swipeable" onClick={onSwipe}>{children}</div>
+  default: ({ children, onSwipe, onSwipeRight }: { 
+    children: React.ReactNode; 
+    onSwipe: () => void;
+    onSwipeRight?: () => void;
+  }) => (
+    <div data-testid="swipeable" onClick={onSwipe} onContextMenu={(e) => { e.preventDefault(); onSwipeRight?.(); }}>
+      {children}
+    </div>
   ),
 }));
 
@@ -171,6 +177,35 @@ describe('ListItem', () => {
       
       expect(mockConfirm).toHaveBeenCalledWith('Are you sure you want to delete this item?');
       expect(onDelete).toHaveBeenCalledWith('item-1');
+    });
+
+    it('calls handleEdit when Swipeable onSwipeRight is triggered', () => {
+      const onEdit = vi.fn();
+      const mockItem = createMockItem({ id: 'item-1', name: 'Milk' });
+      render(<ListItem item={mockItem} onToggle={vi.fn()} onDelete={vi.fn()} onEdit={onEdit} />);
+      
+      // Trigger the onSwipeRight by using context menu on the swipeable div
+      fireEvent.contextMenu(screen.getByTestId('swipeable'));
+      
+      // Should enter edit mode (show the edit form)
+      expect(screen.getByDisplayValue('Milk')).toBeInTheDocument();
+    });
+
+    it('does not render Swipeable when editing', () => {
+      const mockItem = createMockItem({ id: 'item-1', name: 'Milk' });
+      render(<ListItem item={mockItem} onToggle={vi.fn()} onDelete={vi.fn()} onEdit={vi.fn()} />);
+      
+      // Swipeable should be present initially
+      expect(screen.getByTestId('swipeable')).toBeInTheDocument();
+      
+      // Click edit button
+      fireEvent.click(screen.getByTitle('Edit item'));
+      
+      // Swipeable should NOT be present when editing
+      expect(screen.queryByTestId('swipeable')).not.toBeInTheDocument();
+      
+      // But the edit form should be visible
+      expect(screen.getByDisplayValue('Milk')).toBeInTheDocument();
     });
   });
 

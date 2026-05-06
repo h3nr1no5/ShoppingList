@@ -11,6 +11,10 @@ tools:
   write: true
   edit: true
   bash: false
+
+  azure-mcp_*: true
+  github: true
+  context7: true
 ---
 
 You are the **Docs** agent — an expert technical writer.
