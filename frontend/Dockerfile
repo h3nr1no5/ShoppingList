@@ -5,13 +5,12 @@ WORKDIR /app
 
 # Copy package files and install dependencies
 COPY package*.json ./
-RUN npm install
+RUN npm ci
 
-# Copy source files
+# Copy source files AND .env file (contains VITE_API_URL for Vite)
 COPY . .
 
-# Build the frontend (this runs tsc and vite build)
-# VITE_API_URL is read from .env by Vite (written by infra/hooks/prepackage.sh)
+# Build the frontend - Vite will read VITE_API_URL from .env file
 RUN npm run build
 
 # Production stage
@@ -26,7 +25,7 @@ COPY --from=builder /app/server.js ./
 # Copy package files for production dependencies
 COPY --from=builder /app/package*.json ./
 
-# Install only production dependencies (optional, for smaller image)
+# Install only production dependencies
 RUN npm install --production
 
 # Expose port
