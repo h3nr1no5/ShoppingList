@@ -13,7 +13,8 @@ ENV_FILE="${REPO_ROOT}/frontend/.env"
 # Try to get the API URL from azd environment outputs
 API_URL=""
 if command -v azd &> /dev/null; then
-  API_URL=$(azd env get-values 2>/dev/null | grep '^API_APP_URL=' | head -1 | cut -d'=' -f2- | tr -d '"' || true)
+  # azd env get-values outputs AZURE_API_APP_URL (with AZURE_ prefix)
+  API_URL=$(azd env get-values 2>/dev/null | grep '^AZURE_API_APP_URL=' | head -1 | cut -d'=' -f2- | tr -d '"' || true)
 fi
 
 # Fallback: use existing value in .env if API_APP_URL not available (first provision)
