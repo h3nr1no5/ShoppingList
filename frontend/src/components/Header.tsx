@@ -15,11 +15,11 @@ const Header: React.FC = () => {
 
   // Wrap callbacks in useCallback to stabilize references for useApiHealth
   const handleDisconnect = useCallback(() => {
-    showToast('API Disconnected', 'error');
+    showToast('Connection lost. Please check your internet.', 'error');
   }, [showToast]);
 
   const handleReconnect = useCallback(() => {
-    showToast('API Reconnected', 'success');
+    showToast('Back online!', 'success');
     dismissAll();
   }, [showToast, dismissAll]);
 

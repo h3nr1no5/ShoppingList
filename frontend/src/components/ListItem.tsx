@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { type ListItem as ListItemType } from '../types';
 import Swipeable from './Swipeable';
+import ConfirmDialog from './ConfirmDialog';
 
 /** Formats a date string as relative time (e.g., "5m ago", "2h ago", "Jan 4") */
 function formatRelativeTime(dateString: string): string {
@@ -47,16 +48,24 @@ const ListItem: React.FC<ListItemProps> = ({ item, onToggle, onDelete, onEdit })
   const [editName, setEditName] = useState(item.name);
   const [editQuantity, setEditQuantity] = useState(item.quantity);
   const [quantityInputValue, setQuantityInputValue] = useState(String(item.quantity));
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const handleCheckboxChange = (): void => {
     onToggle(item.id, !item.is_checked);
   };
 
   const handleDelete = (): void => {
-    if (confirm('Are you sure you want to delete this item?')) {
-      onDelete(item.id);
-    }
+    setShowDeleteConfirm(true);
   };
+
+  const confirmDelete = useCallback((): void => {
+    setShowDeleteConfirm(false);
+    onDelete(item.id);
+  }, [onDelete, item.id]);
+
+  const cancelDelete = useCallback((): void => {
+    setShowDeleteConfirm(false);
+  }, []);
 
   const handleEdit = (): void => {
     setEditName(item.name);
@@ -201,10 +210,23 @@ const ListItem: React.FC<ListItemProps> = ({ item, onToggle, onDelete, onEdit })
 
   // When editing, render itemContent directly without Swipeable wrapper
   // to prevent accidental swipe-to-delete when tapping save/cancel buttons
-  return isEditing ? itemContent : (
-    <Swipeable onSwipe={handleDelete} onSwipeRight={handleEdit}>
-      {itemContent}
-    </Swipeable>
+  return (
+    <>
+      {isEditing ? itemContent : (
+        <Swipeable onSwipe={handleDelete} onSwipeRight={handleEdit}>
+          {itemContent}
+        </Swipeable>
+      )}
+      <ConfirmDialog
+        isOpen={showDeleteConfirm}
+        title="Delete Item"
+        message={`Are you sure you want to delete "${item.name}"? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
+      />
+    </>
   );
 };
 

@@ -25,7 +25,7 @@ export function useToast() {
   }, []);
 
   const showToast = useCallback(
-    (message: string, type: 'success' | 'error', autoDismissMs: number = 3000) => {
+    (message: string, type: 'success' | 'error' | 'warning', autoDismissMs: number = 3000) => {
       const id = ++idCounter.current;
 
       setToasts((prev) => [...prev, { id, message, type }]);
