@@ -6,6 +6,8 @@ import { type ShoppingList } from '../types';
 import { AuthContext } from '../context/AuthContext';
 import { ThemeContext } from '../context/ThemeContext';
 import { ToastProvider } from '../context/ToastContext';
+import { useToastContext } from '../context/useToastContext';
+import { ToastContainer } from '../components/ToastContainer';
 
 // Mock the apiClient
 vi.mock('../api/client', async () => {
@@ -55,23 +57,36 @@ const createMockList = (overrides: Partial<ShoppingList> = {}): ShoppingList => 
 });
 
 const renderWithAuth = (ui: React.ReactElement, isAuthenticated = true) => {
+  // Wrapper component to access toast context and render ToastContainer
+  const ToastContainerWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+    const { toasts, dismissToast } = useToastContext();
+    return (
+      <>
+        {children}
+        <ToastContainer toasts={toasts} dismissToast={dismissToast} />
+      </>
+    );
+  };
+
   return render(
     <BrowserRouter>
       <ThemeContext.Provider value={{ theme: 'light', toggleTheme: vi.fn() }}>
         <ToastProvider>
-          <AuthContext.Provider
-            value={{
-              isAuthenticated,
-              user: isAuthenticated ? { id: 'user-1', email: 'test@example.com' } : null,
-              token: isAuthenticated ? 'mock-token' : null,
-              login: vi.fn(),
-              register: vi.fn(),
-              logout: vi.fn(),
-              loading: false,
-            }}
-          >
-            {ui}
-          </AuthContext.Provider>
+          <ToastContainerWrapper>
+            <AuthContext.Provider
+              value={{
+                isAuthenticated,
+                user: isAuthenticated ? { id: 'user-1', email: 'test@example.com' } : null,
+                token: isAuthenticated ? 'mock-token' : null,
+                login: vi.fn(),
+                register: vi.fn(),
+                logout: vi.fn(),
+                loading: false,
+              }}
+            >
+              {ui}
+            </AuthContext.Provider>
+          </ToastContainerWrapper>
         </ToastProvider>
       </ThemeContext.Provider>
     </BrowserRouter>
@@ -254,7 +269,7 @@ describe('ListDetail - Edit List Name', () => {
       renderWithAuth(<ListDetail />);
 
       await waitFor(() => {
-        expect(screen.getByText(/list not found/i)).toBeInTheDocument();
+        expect(screen.getByText(/couldn't load the list/i)).toBeInTheDocument();
       });
     });
   });

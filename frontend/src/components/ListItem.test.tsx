@@ -28,11 +28,8 @@ const createMockItem = (overrides: Partial<ListItemType> = {}): ListItemType => 
 });
 
 describe('ListItem', () => {
-  const mockConfirm = vi.fn();
-
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.stubGlobal('confirm', mockConfirm);
   });
 
   describe('Renders correctly', () => {
@@ -102,25 +99,35 @@ describe('ListItem', () => {
   describe('Delete button', () => {
     it('calls onDelete with item id when delete button is clicked and confirmed', () => {
       const onDelete = vi.fn();
-      mockConfirm.mockReturnValue(true);
-      const mockItem = createMockItem({ id: 'item-1' });
+      const mockItem = createMockItem({ id: 'item-1', name: 'Milk' });
       render(<ListItem item={mockItem} onToggle={vi.fn()} onDelete={onDelete} onEdit={vi.fn()} />);
       
+      // Click delete button to open confirmation dialog
       fireEvent.click(screen.getByTitle('Delete item'));
       
-      expect(mockConfirm).toHaveBeenCalledWith('Are you sure you want to delete this item?');
+      // Confirm dialog should be visible
+      expect(screen.getByText('Delete Item')).toBeInTheDocument();
+      
+      // Click the confirm button to delete
+      fireEvent.click(screen.getByText('Delete'));
+      
       expect(onDelete).toHaveBeenCalledWith('item-1');
     });
 
     it('does not call onDelete when confirm is cancelled', () => {
       const onDelete = vi.fn();
-      mockConfirm.mockReturnValue(false);
-      const mockItem = createMockItem({ id: 'item-1' });
+      const mockItem = createMockItem({ id: 'item-1', name: 'Milk' });
       render(<ListItem item={mockItem} onToggle={vi.fn()} onDelete={onDelete} onEdit={vi.fn()} />);
       
+      // Click delete button to open confirmation dialog
       fireEvent.click(screen.getByTitle('Delete item'));
       
-      expect(mockConfirm).toHaveBeenCalledWith('Are you sure you want to delete this item?');
+      // Confirm dialog should be visible
+      expect(screen.getByText('Delete Item')).toBeInTheDocument();
+      
+      // Click the cancel button
+      fireEvent.click(screen.getByText('Cancel'));
+      
       expect(onDelete).not.toHaveBeenCalled();
     });
   });
@@ -169,13 +176,18 @@ describe('ListItem', () => {
 
     it('calls onDelete when Swipeable onSwipe is triggered', () => {
       const onDelete = vi.fn();
-      mockConfirm.mockReturnValue(true);
-      const mockItem = createMockItem({ id: 'item-1' });
+      const mockItem = createMockItem({ id: 'item-1', name: 'Milk' });
       render(<ListItem item={mockItem} onToggle={vi.fn()} onDelete={onDelete} onEdit={vi.fn()} />);
       
+      // Trigger swipe to open confirmation dialog
       fireEvent.click(screen.getByTestId('swipeable'));
       
-      expect(mockConfirm).toHaveBeenCalledWith('Are you sure you want to delete this item?');
+      // Confirm dialog should be visible
+      expect(screen.getByText('Delete Item')).toBeInTheDocument();
+      
+      // Click the confirm button to delete
+      fireEvent.click(screen.getByText('Delete'));
+      
       expect(onDelete).toHaveBeenCalledWith('item-1');
     });
 
