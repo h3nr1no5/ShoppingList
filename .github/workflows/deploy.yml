@@ -71,8 +71,8 @@ jobs:
       - name: Install azd
         uses: Azure/setup-azd@v1.0.0
 
-      - name: Log in to Azure (OID
-        if: env.AZURE_CLIENT_ID != ''
+      - name: Log in to Azure (OIDC)
+        if: ${{ env.AZURE_CLIENT_ID != '' }}
         run: |
           azd auth login \
             --client-id "$AZURE_CLIENT_ID" \
