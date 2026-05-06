@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { useToastContext } from '../context/useToastContext';
 import { type ShoppingList, type ListItem as ListItemType } from '../types';
 import apiClient, { generateShareLink } from '../api/client';
 import Header from '../components/Header';
@@ -12,10 +13,10 @@ import ShareModal from '../components/ShareModal';
 const ListDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { isAuthenticated, loading } = useAuth();
+  const { showToast } = useToastContext();
   const navigate = useNavigate();
   const [list, setList] = useState<ShoppingList | null>(null);
   const [loadingList, setLoadingList] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
   const initialFetchDone = useRef(false);
@@ -27,11 +28,11 @@ const ListDetail: React.FC = () => {
       setList(response.data);
     } catch (err) {
       console.error('Failed to fetch list:', err);
-      setError('Failed to load list');
+      showToast("Couldn't load the list.", 'error');
     } finally {
       setLoadingList(false);
     }
-  }, [id]);
+  }, [id, showToast]);
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
@@ -60,7 +61,7 @@ const ListDetail: React.FC = () => {
       });
     } catch (err) {
       console.error('Failed to add item:', err);
-      setError('Failed to add item');
+      showToast('Failed to add item.', 'error');
     }
   };
 
@@ -87,7 +88,7 @@ const ListDetail: React.FC = () => {
       });
     } catch (err: unknown) {
       console.error('Failed to update item:', err);
-      setError('Failed to update item');
+      showToast('Failed to update item.', 'error');
       // Revert on error
       setList(prev => {
         if (!prev) return prev;
@@ -112,7 +113,7 @@ const ListDetail: React.FC = () => {
       });
     } catch (err) {
       console.error('Failed to delete item:', err);
-      setError('Failed to delete item');
+      showToast('Failed to delete item.', 'error');
     }
   };
 
@@ -137,7 +138,7 @@ const handleEditItem = async (itemId: string, name: string, quantity: number): P
       await apiClient.put(`/items/${itemId}`, { name, quantity });
     } catch (err: unknown) {
       console.error('Failed to edit item:', err);
-      setError('Failed to edit item');
+      showToast('Failed to edit item.', 'error');
       // Revert on error
       if (originalItem) {
         setList(prev => {
@@ -164,7 +165,7 @@ const handleEditItem = async (itemId: string, name: string, quantity: number): P
       setShowEditForm(false);
     } catch (err) {
       console.error('Failed to update list:', err);
-      setError('Failed to update list');
+      showToast('Failed to update list.', 'error');
     }
   };
 
@@ -177,7 +178,7 @@ const handleEditItem = async (itemId: string, name: string, quantity: number): P
       return shareCode;
     } catch (err) {
       console.error('Failed to generate share link:', err);
-      setError('Failed to generate share link');
+      showToast('Failed to generate share link.', 'error');
       return null;
     }
   };
@@ -208,9 +209,7 @@ const handleEditItem = async (itemId: string, name: string, quantity: number): P
     return (
       <div className="page">
         <Header />
-        <div className="loading-container">
-          <div className="error-message">List not found</div>
-        </div>
+        {/* Toast already shown by fetchList error handler */}
       </div>
     );
   }
@@ -234,15 +233,6 @@ const handleEditItem = async (itemId: string, name: string, quantity: number): P
             Share
           </button>
         </div>
-
-        {error && (
-          <div className="error-message">
-            {error}
-            <button onClick={() => setError(null)} className="error-close">
-              ×
-            </button>
-          </div>
-        )}
 
         {showEditForm ? (
           <div className="card form-card">

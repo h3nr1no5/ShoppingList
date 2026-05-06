@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { useToastContext } from '../context/useToastContext';
 import { type ShoppingList } from '../types';
 import apiClient from '../api/client';
 import Header from '../components/Header';
@@ -9,11 +10,11 @@ import ListForm from '../components/ListForm';
 
 const Home: React.FC = () => {
   const { isAuthenticated, loading } = useAuth();
+  const { showToast } = useToastContext();
   const navigate = useNavigate();
   const [lists, setLists] = useState<ShoppingList[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [loadingLists, setLoadingLists] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const initialFetchDone = useRef(false);
 
   const fetchLists = useCallback(async (): Promise<void> => {
@@ -23,11 +24,11 @@ const Home: React.FC = () => {
       setLists(response.data);
     } catch (err) {
       console.error('Failed to fetch lists:', err);
-      setError('Failed to load lists');
+      showToast("Couldn't load your lists. Please try again.", 'error');
     } finally {
       setLoadingLists(false);
     }
-  }, []);
+  }, [showToast]);
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
@@ -51,7 +52,7 @@ const Home: React.FC = () => {
       setShowForm(false);
     } catch (err) {
       console.error('Failed to create list:', err);
-      setError('Failed to create list');
+      showToast('Failed to create list. Please try again.', 'error');
     }
   };
 
@@ -61,7 +62,7 @@ const Home: React.FC = () => {
       setLists(lists.filter((list) => list.id !== id));
     } catch (err) {
       console.error('Failed to delete list:', err);
-      setError('Failed to delete list');
+      showToast('Failed to delete list. Please try again.', 'error');
     }
   };
 
@@ -89,15 +90,6 @@ const Home: React.FC = () => {
             {showForm ? 'Cancel' : '+ New List'}
           </button>
         </div>
-
-        {error && (
-          <div className="error-message">
-            {error}
-            <button onClick={() => setError(null)} className="error-close">
-              ×
-            </button>
-          </div>
-        )}
 
         {showForm && (
           <div className="card form-card">

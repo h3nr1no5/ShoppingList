@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { useToastContext } from '../context/useToastContext';
 
 const Register: React.FC = () => {
   const { register, isAuthenticated, loading: authLoading } = useAuth();
+  const { showToast } = useToastContext();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [inviteCode, setInviteCode] = useState('');
-  const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -20,15 +21,14 @@ const Register: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
-    setError(null);
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match');
+      showToast('Passwords do not match. Please check both fields.', 'error');
       return;
     }
 
     if (password.length < 8) {
-      setError('Password must be at least 8 characters');
+      showToast('Password must be at least 8 characters long.', 'error');
       return;
     }
 
@@ -43,7 +43,7 @@ const Register: React.FC = () => {
           ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail ||
             'Registration failed'
           : 'Registration failed. Please try again.';
-      setError(errorMessage);
+      showToast(errorMessage, 'error');
     } finally {
       setSubmitting(false);
     }
@@ -66,8 +66,6 @@ const Register: React.FC = () => {
         </div>
 
         <form onSubmit={handleSubmit} className="auth-form">
-          {error && <div className="error-message">{error}</div>}
-
           <div className="form-group">
             <label htmlFor="inviteCode" className="form-label">
               Invite Code
