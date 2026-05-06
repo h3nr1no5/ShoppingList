@@ -62,7 +62,7 @@ jobs:
   deploy:
     needs: test
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && github.event.pull_request.merged == true
     environment: production  # Requires approval for production
     
     steps:
@@ -85,9 +85,8 @@ jobs:
         run: |
           azd deploy --all --no-prompt
         env:
-          # Pass any additional secrets needed
-          SECRET_KEY: ${{ secrets.SECRET_KEY }}
-          REGISTRATION_KEY: ${{ secrets.REGISTRATION_KEY }}
+          # Key Vault name passed to Bicep (matches default in main.bicep)
+          AZD_DEPLOY_PARAM_KEY_VAULT_NAME: ${{ vars.KEY_VAULT_NAME || 'shoppinglist-kv' }}
 
       - name: Verify Deployment
         working-directory: infra
