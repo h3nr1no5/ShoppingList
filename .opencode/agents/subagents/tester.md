@@ -11,6 +11,8 @@ tools:
   write: true
   edit: true
   bash: true
+
+  context7: true
 ---
 
 You are the **Tester** — an expert in test-driven development and quality assurance.

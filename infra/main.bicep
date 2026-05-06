@@ -14,6 +14,14 @@ param postgresAdminLogin string
 @secure()
 param postgresAdminPassword string
 
+@description('JWT secret key for API')
+@secure()
+param secretKey string
+
+@description('Registration invite code')
+@secure()
+param registrationKey string
+
 @description('API container image')
 param apiImage string = 'nginx:latest'
 
