@@ -21,13 +21,6 @@ hooks:
     shell: sh
     run: ./infra/hooks/verify-deployment.sh
     continueOnError: false  # Fail deployment if verification fails
-   
-
-  postdeploy:
-    shell: sh
-    run: ./infra/hooks/verify-deployment.sh
-    continueOnError: false  # Fail deployment if verification fails
-  
 
 services:
   web:
