@@ -17,17 +17,10 @@ hooks:
     run: ./infra/hooks/pre-deploy-check.sh
     continueOnError: false  # Fail deployment if URL checks fail
 
-  postdeploy:
+postdeploy:
     shell: sh
     run: ./infra/hooks/verify-deployment.sh
     continueOnError: false  # Fail deployment if verification fails
-   
-
-  postdeploy:
-    shell: sh
-    run: ./infra/hooks/verify-deployment.sh
-    continueOnError: false  # Fail deployment if verification fails
-  
 
 services:
   web:
