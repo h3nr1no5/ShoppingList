@@ -12,6 +12,17 @@ hooks:
     shell: sh
     run: ./infra/hooks/prepackage.sh
 
+  predeploy:
+    shell: sh
+    run: ./infra/hooks/pre-deploy-check.sh
+    continueOnError: false  # Fail deployment if URL checks fail
+
+  postdeploy:
+    shell: sh
+    run: ./infra/hooks/verify-deployment.sh
+    continueOnError: false  # Fail deployment if verification fails
+   
+
   postdeploy:
     shell: sh
     run: ./infra/hooks/verify-deployment.sh
