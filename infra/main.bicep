@@ -34,6 +34,13 @@ param containerRegistryName string = '${envName}acr'
 @description('Azure Container Registry SKU')
 param containerRegistrySku string = 'Basic'
 
+@description('Azure Key Vault name')
+param keyVaultName string = 'shoppinglist-kv'
+
+resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' existing = {
+  name: keyVaultName
+}
+
 // Container Registry
 resource containerRegistry 'Microsoft.ContainerRegistry/registries@2021-09-01' = {
   name: containerRegistryName
@@ -81,11 +88,11 @@ resource apiContainerApp 'Microsoft.App/containerApps@2022-03-01' = {
       secrets: [
         {
           name: 'secret-key'
-          value: secretKey
+          value: keyVault.getSecret('secret-key')
         }
         {
           name: 'registration-key'
-          value: registrationKey
+          value: keyVault.getSecret('registration-key')
         }
       ]
       env: [
