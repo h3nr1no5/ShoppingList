@@ -4,7 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useToastContext } from '../context/useToastContext';
 import { useApiHealthContext } from '../context/ApiHealthContext';
 import { type ShoppingList, type ListItem as ListItemType } from '../types';
-import apiClient, { generateShareLink } from '../api/client';
+import apiClient, { generateShareLink, apiClientNoRedirect } from '../api/client';
 import Header from '../components/Header';
 import ListItem from '../components/ListItem';
 import ItemForm from '../components/ItemForm';
@@ -71,21 +71,23 @@ const ListDetail: React.FC = () => {
     });
 
     // Fire API in background — no revert on failure
-    try {
-      const response = await apiClient.post<ListItemType>(`/lists/${list.id}/items`, { name, quantity });
-      // Replace temp ID with real one from server
-      setList(prev => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          items: (prev.items ?? []).map(item =>
-            item.id === tempId ? response.data : item
-          ),
-        };
-      });
-    } catch (err) {
-      console.error('Failed to add item:', err);
-      // Keep the item locally — no revert
+    if (isConnected) {
+      try {
+        const response = await apiClientNoRedirect.post<ListItemType>(`/lists/${list.id}/items`, { name, quantity });
+        // Replace temp ID with real one from server
+        setList(prev => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            items: (prev.items ?? []).map(item =>
+              item.id === tempId ? response.data : item
+            ),
+          };
+        });
+      } catch (err) {
+        console.error('Failed to add item:', err);
+        // Keep the item locally — no revert
+      }
     }
   };
 
@@ -106,13 +108,16 @@ const ListDetail: React.FC = () => {
       };
     });
 
-    try {
-      await apiClient.put(`/items/${itemId}`, {
-        is_checked: isChecked,
-      });
-    } catch (err: unknown) {
-      console.error('Failed to update item:', err);
-      showToast('Failed to update item.', 'error');
+    // Fire API in background if connected
+    if (isConnected) {
+      try {
+        await apiClientNoRedirect.put(`/items/${itemId}`, {
+          is_checked: isChecked,
+        });
+      } catch (err: unknown) {
+        console.error('Failed to update item:', err);
+        showToast('Failed to update item.', 'error');
+      }
     }
   };
 
@@ -129,11 +134,13 @@ const ListDetail: React.FC = () => {
     });
 
     // Fire API in background
-    try {
-      await apiClient.delete(`/items/${itemId}`);
-    } catch (err) {
-      console.error('Failed to delete item:', err);
-      showToast('Failed to delete item.', 'error');
+    if (isConnected) {
+      try {
+        await apiClientNoRedirect.delete(`/items/${itemId}`);
+      } catch (err) {
+        console.error('Failed to delete item:', err);
+        showToast('Failed to delete item.', 'error');
+      }
     }
   };
 
@@ -151,11 +158,14 @@ const handleEditItem = async (itemId: string, name: string, quantity: number): P
       };
     });
 
-    try {
-      await apiClient.put(`/items/${itemId}`, { name, quantity });
-    } catch (err: unknown) {
-      console.error('Failed to edit item:', err);
-      showToast('Failed to edit item.', 'error');
+    // Fire API in background if connected
+    if (isConnected) {
+      try {
+        await apiClientNoRedirect.put(`/items/${itemId}`, { name, quantity });
+      } catch (err: unknown) {
+        console.error('Failed to edit item:', err);
+        showToast('Failed to edit item.', 'error');
+      }
     }
   };
 

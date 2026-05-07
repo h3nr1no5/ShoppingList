@@ -2,15 +2,14 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { type ShoppingList, type ListItem as ListItemType } from '../types';
 import { useApiHealthContext } from '../context/ApiHealthContext';
-import apiClient from '../api/client';
+import apiClient, { apiClientNoRedirect } from '../api/client';
 import Header from '../components/Header';
 import ListItem from '../components/ListItem';
 import ItemForm from '../components/ItemForm';
 
 const SharedList: React.FC = () => {
   const { shareCode } = useParams<{ shareCode: string }>();
-  // isConnected available for future offline-disabled UI
-  void useApiHealthContext();
+  const { isConnected } = useApiHealthContext();
   const [list, setList] = useState<ShoppingList | null>(null);
   const [loadingList, setLoadingList] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -58,28 +57,30 @@ const SharedList: React.FC = () => {
     });
 
     // Fire API in background — no revert on failure
-    try {
-      const response = await apiClient.post<ListItemType>(`/lists/${list.id}/items`, {
-        name,
-        quantity,
-      }, {
-        params: { share_code: shareCode },
-      });
-      // Replace temp ID with real one from server
-      setList(prev => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          items: (prev.items ?? []).map(item =>
-            item.id === tempId ? response.data : item
-          ),
-        };
-      });
-    } catch (err: unknown) {
-      const axiosErr = err as { response?: { status?: number; data?: { detail?: string } } };
-      const detail = axiosErr.response?.data?.detail;
-      console.error('Failed to add item:', { status: axiosErr.response?.status, detail });
-      // Keep the item locally — no revert
+    if (isConnected) {
+      try {
+        const response = await apiClientNoRedirect.post<ListItemType>(`/lists/${list.id}/items`, {
+          name,
+          quantity,
+        }, {
+          params: { share_code: shareCode },
+        });
+        // Replace temp ID with real one from server
+        setList(prev => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            items: (prev.items ?? []).map(item =>
+              item.id === tempId ? response.data : item
+            ),
+          };
+        });
+      } catch (err: unknown) {
+        const axiosErr = err as { response?: { status?: number; data?: { detail?: string } } };
+        const detail = axiosErr.response?.data?.detail;
+        console.error('Failed to add item:', { status: axiosErr.response?.status, detail });
+        // Keep the item locally — no revert
+      }
     }
   };
 
@@ -100,23 +101,26 @@ const SharedList: React.FC = () => {
       };
     });
 
-    try {
-      await apiClient.put(`/items/${itemId}`, {
-        is_checked: isChecked,
-      }, {
-        params: { share_code: shareCode },
-      });
-    } catch (err: unknown) {
-      const axiosErr = err as { response?: { status?: number; data?: { detail?: string } } };
-      const status = axiosErr.response?.status;
-      const detail = axiosErr.response?.data?.detail;
-      console.error('Failed to update item:', { status, detail, shareCode, itemId });
-      if (status === 401) {
-        setError('Not authorized. The share link may have expired.');
-      } else if (status === 404) {
-        setError('Item not found.');
-      } else {
-        setError(detail || 'Failed to update item');
+    // Fire API in background if connected
+    if (isConnected) {
+      try {
+        await apiClientNoRedirect.put(`/items/${itemId}`, {
+          is_checked: isChecked,
+        }, {
+          params: { share_code: shareCode },
+        });
+      } catch (err: unknown) {
+        const axiosErr = err as { response?: { status?: number; data?: { detail?: string } } };
+        const status = axiosErr.response?.status;
+        const detail = axiosErr.response?.data?.detail;
+        console.error('Failed to update item:', { status, detail, shareCode, itemId });
+        if (status === 401) {
+          setError('Not authorized. The share link may have expired.');
+        } else if (status === 404) {
+          setError('Item not found.');
+        } else {
+          setError(detail || 'Failed to update item');
+        }
       }
     }
   };
@@ -134,15 +138,17 @@ const handleDeleteItem = async (itemId: string): Promise<void> => {
   });
 
   // Fire API in background
-  try {
-    await apiClient.delete(`/items/${itemId}`, {
-      params: { share_code: shareCode },
-    });
-  } catch (err: unknown) {
-    const axiosErr = err as { response?: { status?: number; data?: { detail?: string } } };
-    const detail = axiosErr.response?.data?.detail;
-    console.error('Failed to delete item:', { status: axiosErr.response?.status, detail });
-    setError(detail || 'Failed to delete item');
+  if (isConnected) {
+    try {
+      await apiClientNoRedirect.delete(`/items/${itemId}`, {
+        params: { share_code: shareCode },
+      });
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { status?: number; data?: { detail?: string } } };
+      const detail = axiosErr.response?.data?.detail;
+      console.error('Failed to delete item:', { status: axiosErr.response?.status, detail });
+      setError(detail || 'Failed to delete item');
+    }
   }
 };
 
@@ -160,21 +166,24 @@ const handleEditItem = async (itemId: string, name: string, quantity: number): P
       };
     });
 
-    try {
-      await apiClient.put(`/items/${itemId}`, { name, quantity }, {
-        params: { share_code: shareCode },
-      });
-    } catch (err: unknown) {
-      const axiosErr = err as { response?: { status?: number; data?: { detail?: string } } };
-      const status = axiosErr.response?.status;
-      const detail = axiosErr.response?.data?.detail;
-      console.error('Failed to edit item:', { status, detail, shareCode, itemId });
-      if (status === 401) {
-        setError('Not authorized. The share link may have expired.');
-      } else if (status === 404) {
-        setError('Item not found.');
-      } else {
-        setError(detail || 'Failed to edit item');
+    // Fire API in background if connected
+    if (isConnected) {
+      try {
+        await apiClientNoRedirect.put(`/items/${itemId}`, { name, quantity }, {
+          params: { share_code: shareCode },
+        });
+      } catch (err: unknown) {
+        const axiosErr = err as { response?: { status?: number; data?: { detail?: string } } };
+        const status = axiosErr.response?.status;
+        const detail = axiosErr.response?.data?.detail;
+        console.error('Failed to edit item:', { status, detail, shareCode, itemId });
+        if (status === 401) {
+          setError('Not authorized. The share link may have expired.');
+        } else if (status === 404) {
+          setError('Item not found.');
+        } else {
+          setError(detail || 'Failed to edit item');
+        }
       }
     }
   };
