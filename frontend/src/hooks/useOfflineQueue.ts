@@ -35,6 +35,8 @@ export interface PendingAdd {
 
 export type PendingChange = PendingToggle | PendingEdit | PendingDelete | PendingAdd;
 
+type DistributiveOmit<T, K extends keyof any> = T extends any ? Omit<T, K> : never;
+
 const STORAGE_KEY_PREFIX = 'pending_changes_';
 
 function getStorageKey(listId: string): string {
@@ -73,7 +75,7 @@ function writePendingChanges(listId: string, changes: PendingChange[]): void {
 
 export function useOfflineQueue(listId: string) {
   const enqueue = useCallback(
-    (change: Omit<PendingChange, 'id' | 'timestamp'>): void => {
+    (change: DistributiveOmit<PendingChange, 'id' | 'timestamp'>): void => {
       const id = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
       const timestamp = Date.now();
       const newChange = { ...change, id, timestamp } as PendingChange;
