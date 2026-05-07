@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { type ShoppingList, type ListItem as ListItemType } from '../types';
 import { useApiHealthContext } from '../context/ApiHealthContext';
 import apiClient, { apiClientNoRedirect } from '../api/client';
+import { useOfflineQueue } from '../hooks/useOfflineQueue';
 import Header from '../components/Header';
 import ListItem from '../components/ListItem';
 import ItemForm from '../components/ItemForm';
@@ -14,6 +15,10 @@ const SharedList: React.FC = () => {
   const [loadingList, setLoadingList] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const initialFetchDone = useRef(false);
+  const prevConnectedRef = useRef(isConnected);
+  const syncAttemptedRef = useRef(false);
+
+  const { enqueue, getPending, dequeue } = useOfflineQueue(shareCode ?? '');
 
   const fetchSharedList = useCallback(async (): Promise<void> => {
     try {
@@ -28,12 +33,113 @@ const SharedList: React.FC = () => {
     }
   }, [shareCode]);
 
+  const syncPendingChanges = useCallback(async (): Promise<void> => {
+    const pending = getPending();
+    if (pending.length === 0 || !shareCode || !list?.id) return;
+
+    const tempIdMap: Record<string, string> = {};
+
+    for (const change of pending) {
+      try {
+        switch (change.type) {
+          case 'add': {
+            const response = await apiClientNoRedirect.post<ListItemType>(
+              `/lists/${list.id}/items`,
+              { name: change.name, quantity: change.quantity },
+              { params: { share_code: shareCode } }
+            );
+            tempIdMap[change.tempId] = response.data.id;
+            setList(prev => {
+              if (!prev) return prev;
+              const items = prev.items ?? [];
+              const existingIndex = items.findIndex(item => item.id === change.tempId);
+              if (existingIndex >= 0) {
+                const newItems = [...items];
+                newItems[existingIndex] = response.data;
+                return { ...prev, items: newItems };
+              }
+              return { ...prev, items: [...items, response.data] };
+            });
+            break;
+          }
+          case 'toggle': {
+            const realId = tempIdMap[change.itemId] || change.itemId;
+            await apiClientNoRedirect.put(`/items/${realId}`, {
+              is_checked: change.is_checked,
+            }, { params: { share_code: shareCode } });
+            break;
+          }
+          case 'edit': {
+            const realId = tempIdMap[change.itemId] || change.itemId;
+            await apiClientNoRedirect.put(`/items/${realId}`, {
+              name: change.name,
+              quantity: change.quantity,
+            }, { params: { share_code: shareCode } });
+            break;
+          }
+          case 'delete': {
+            const realId = tempIdMap[change.itemId] || change.itemId;
+            await apiClientNoRedirect.delete(`/items/${realId}`, {
+              params: { share_code: shareCode },
+            });
+            break;
+          }
+        }
+        dequeue(change.id);
+      } catch (err: unknown) {
+        // Check if this is an HTTP error with a status code
+        const httpStatus =
+          err && typeof err === 'object' && 'response' in err
+            ? (err as { response: { status: number } }).response?.status
+            : undefined;
+
+        if (httpStatus === 404) {
+          // Item was deleted by another user — remove from queue and continue
+          console.warn('Item not found (likely deleted), removing from queue:', change);
+          dequeue(change.id);
+          continue;
+        }
+
+        if (httpStatus === 401) {
+          // Auth token expired — notify user and stop
+          console.error('Authentication failed during sync:', err);
+          return;
+        }
+
+        // Transient error (network, 500, etc.) — stop and retry later
+        console.error('Failed to sync pending change, will retry later:', err, change);
+        return;
+      }
+    }
+
+    // After all changes synced, re-fetch to reconcile state
+    await fetchSharedList();
+  }, [shareCode, getPending, dequeue, list, fetchSharedList]);
+
   useEffect(() => {
     if (shareCode && !initialFetchDone.current) {
       initialFetchDone.current = true;
       fetchSharedList();
     }
   }, [shareCode, fetchSharedList]);
+
+  // Sync pending changes when coming back online
+  useEffect(() => {
+    const wasOffline = !prevConnectedRef.current;
+    prevConnectedRef.current = isConnected;
+
+    if (wasOffline && isConnected) {
+      syncPendingChanges();
+    }
+  }, [isConnected, syncPendingChanges]);
+
+  // Sync pending changes once after initial list load
+  useEffect(() => {
+    if (!loadingList && list && isConnected && !syncAttemptedRef.current) {
+      syncAttemptedRef.current = true;
+      syncPendingChanges();
+    }
+  }, [loadingList, list, isConnected, syncPendingChanges]);
 
   const handleAddItem = async (name: string, quantity: number): Promise<void> => {
     if (!list) return;
@@ -77,8 +183,16 @@ const SharedList: React.FC = () => {
         });
       } catch (err: unknown) {
         console.error('Failed to add item:', err);
-        // Keep the item locally — no revert
+        enqueue({ type: 'add', tempId, name, quantity });
       }
+    } else {
+      // Queue the change for later sync
+      enqueue({
+        type: 'add',
+        tempId,
+        name,
+        quantity,
+      });
     }
   };
 
@@ -109,7 +223,15 @@ const SharedList: React.FC = () => {
         });
       } catch (err: unknown) {
         console.error('Failed to update item:', err);
+        enqueue({ type: 'toggle', itemId, is_checked: isChecked });
       }
+    } else {
+      // Queue the change for later sync
+      enqueue({
+        type: 'toggle',
+        itemId,
+        is_checked: isChecked,
+      });
     }
   };
 
@@ -125,17 +247,24 @@ const handleDeleteItem = async (itemId: string): Promise<void> => {
     };
   });
 
-  // Fire API in background
-  if (isConnected) {
-    try {
-      await apiClientNoRedirect.delete(`/items/${itemId}`, {
-        params: { share_code: shareCode },
+// Fire API in background
+    if (isConnected) {
+      try {
+        await apiClientNoRedirect.delete(`/items/${itemId}`, {
+          params: { share_code: shareCode },
+        });
+      } catch (err: unknown) {
+        console.error('Failed to delete item:', err);
+        enqueue({ type: 'delete', itemId });
+      }
+    } else {
+      // Queue the change for later sync
+      enqueue({
+        type: 'delete',
+        itemId,
       });
-    } catch (err: unknown) {
-      console.error('Failed to delete item:', err);
     }
-  }
-};
+  };
 
 const handleEditItem = async (itemId: string, name: string, quantity: number): Promise<void> => {
     if (!list) return;
@@ -159,7 +288,16 @@ const handleEditItem = async (itemId: string, name: string, quantity: number): P
         });
       } catch (err: unknown) {
         console.error('Failed to edit item:', err);
+        enqueue({ type: 'edit', itemId, name, quantity });
       }
+    } else {
+      // Queue the change for later sync
+      enqueue({
+        type: 'edit',
+        itemId,
+        name,
+        quantity,
+      });
     }
   };
 

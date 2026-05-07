@@ -5,6 +5,7 @@ import { useToastContext } from '../context/useToastContext';
 import { useApiHealthContext } from '../context/ApiHealthContext';
 import { type ShoppingList, type ListItem as ListItemType } from '../types';
 import apiClient, { generateShareLink, apiClientNoRedirect } from '../api/client';
+import { useOfflineQueue } from '../hooks/useOfflineQueue';
 import Header from '../components/Header';
 import ListItem from '../components/ListItem';
 import ItemForm from '../components/ItemForm';
@@ -22,6 +23,10 @@ const ListDetail: React.FC = () => {
   const [showShareModal, setShowShareModal] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
   const initialFetchDone = useRef(false);
+  const prevConnectedRef = useRef(isConnected);
+  const syncAttemptedRef = useRef(false);
+
+  const { enqueue, getPending, dequeue } = useOfflineQueue(id ?? '');
 
   const fetchList = useCallback(async (): Promise<void> => {
     try {
@@ -36,6 +41,87 @@ const ListDetail: React.FC = () => {
     }
   }, [id, showToast]);
 
+  const syncPendingChanges = useCallback(async (): Promise<void> => {
+    const pending = getPending();
+    if (pending.length === 0 || !id) return;
+
+    const tempIdMap: Record<string, string> = {};
+
+    for (const change of pending) {
+      try {
+        switch (change.type) {
+          case 'add': {
+            const response = await apiClientNoRedirect.post<ListItemType>(
+              `/lists/${id}/items`,
+              { name: change.name, quantity: change.quantity }
+            );
+            tempIdMap[change.tempId] = response.data.id;
+            setList(prev => {
+              if (!prev) return prev;
+              const items = prev.items ?? [];
+              const existingIndex = items.findIndex(item => item.id === change.tempId);
+              if (existingIndex >= 0) {
+                const newItems = [...items];
+                newItems[existingIndex] = response.data;
+                return { ...prev, items: newItems };
+              }
+              return { ...prev, items: [...items, response.data] };
+            });
+            break;
+          }
+          case 'toggle': {
+            const realId = tempIdMap[change.itemId] || change.itemId;
+            await apiClientNoRedirect.put(`/items/${realId}`, {
+              is_checked: change.is_checked,
+            });
+            break;
+          }
+          case 'edit': {
+            const realId = tempIdMap[change.itemId] || change.itemId;
+            await apiClientNoRedirect.put(`/items/${realId}`, {
+              name: change.name,
+              quantity: change.quantity,
+            });
+            break;
+          }
+          case 'delete': {
+            const realId = tempIdMap[change.itemId] || change.itemId;
+            await apiClientNoRedirect.delete(`/items/${realId}`);
+            break;
+          }
+        }
+        dequeue(change.id);
+      } catch (err: unknown) {
+        // Check if this is an HTTP error with a status code
+        const httpStatus =
+          err && typeof err === 'object' && 'response' in err
+            ? (err as { response: { status: number } }).response?.status
+            : undefined;
+
+        if (httpStatus === 404) {
+          // Item was deleted by another user — remove from queue and continue
+          console.warn('Item not found (likely deleted), removing from queue:', change);
+          dequeue(change.id);
+          continue;
+        }
+
+        if (httpStatus === 401) {
+          // Auth token expired — notify user and stop
+          console.error('Authentication failed during sync:', err);
+          showToast('Session expired. Please log in again.', 'error');
+          return;
+        }
+
+        // Transient error (network, 500, etc.) — stop and retry later
+        console.error('Failed to sync pending change, will retry later:', err, change);
+        return;
+      }
+    }
+
+    // After all changes synced, re-fetch to reconcile state
+    await fetchList();
+  }, [id, getPending, dequeue, fetchList]);
+
   useEffect(() => {
     if (!loading && !isAuthenticated) {
       navigate('/login');
@@ -48,6 +134,24 @@ const ListDetail: React.FC = () => {
       fetchList();
     }
   }, [isAuthenticated, id, fetchList]);
+
+  // Sync pending changes when coming back online
+  useEffect(() => {
+    const wasOffline = !prevConnectedRef.current;
+    prevConnectedRef.current = isConnected;
+
+    if (wasOffline && isConnected) {
+      syncPendingChanges();
+    }
+  }, [isConnected, syncPendingChanges]);
+
+  // Sync pending changes once after initial list load
+  useEffect(() => {
+    if (!loadingList && list && isConnected && !syncAttemptedRef.current) {
+      syncAttemptedRef.current = true;
+      syncPendingChanges();
+    }
+  }, [loadingList, list, isConnected, syncPendingChanges]);
 
   const handleAddItem = async (name: string, quantity: number): Promise<void> => {
     if (!list) return;
@@ -86,8 +190,10 @@ const ListDetail: React.FC = () => {
         });
       } catch (err) {
         console.error('Failed to add item:', err);
-        // Keep the item locally — no revert
+        enqueue({ type: 'add', tempId, name, quantity });
       }
+    } else {
+      enqueue({ type: 'add', tempId, name, quantity });
     }
   };
 
@@ -116,7 +222,10 @@ const ListDetail: React.FC = () => {
         });
       } catch (err: unknown) {
         console.error('Failed to update item:', err);
+        enqueue({ type: 'toggle', itemId, is_checked: isChecked });
       }
+    } else {
+      enqueue({ type: 'toggle', itemId, is_checked: isChecked });
     }
   };
 
@@ -138,11 +247,14 @@ const ListDetail: React.FC = () => {
         await apiClientNoRedirect.delete(`/items/${itemId}`);
       } catch (err) {
         console.error('Failed to delete item:', err);
+        enqueue({ type: 'delete', itemId });
       }
+    } else {
+      enqueue({ type: 'delete', itemId });
     }
   };
 
-const handleEditItem = async (itemId: string, name: string, quantity: number): Promise<void> => {
+  const handleEditItem = async (itemId: string, name: string, quantity: number): Promise<void> => {
     if (!list) return;
 
     // Optimistically update UI using functional state
@@ -162,7 +274,10 @@ const handleEditItem = async (itemId: string, name: string, quantity: number): P
         await apiClientNoRedirect.put(`/items/${itemId}`, { name, quantity });
       } catch (err: unknown) {
         console.error('Failed to edit item:', err);
+        enqueue({ type: 'edit', itemId, name, quantity });
       }
+    } else {
+      enqueue({ type: 'edit', itemId, name, quantity });
     }
   };
 
