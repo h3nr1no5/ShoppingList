@@ -5,16 +5,24 @@ interface ItemFormProps {
   onCancel?: () => void;
 }
 
+const clampQuantity = (value: string): number => {
+  const parsed = parseInt(value, 10);
+  if (isNaN(parsed) || parsed < 1) return 1;
+  if (parsed > 9999) return 9999;
+  return parsed;
+};
+
 const ItemForm: React.FC<ItemFormProps> = ({ onSubmit, onCancel }) => {
   const [name, setName] = useState('');
-  const [quantity, setQuantity] = useState(1);
+  const [quantityInput, setQuantityInput] = useState("1");
 
   const handleSubmit = (e: React.FormEvent): void => {
     e.preventDefault();
     if (name.trim()) {
-      onSubmit(name.trim(), quantity);
+      const finalQty = clampQuantity(quantityInput);
+      onSubmit(name.trim(), finalQty);
       setName('');
-      setQuantity(1);
+      setQuantityInput("1");
     }
   };
 
@@ -30,11 +38,15 @@ const ItemForm: React.FC<ItemFormProps> = ({ onSubmit, onCancel }) => {
           autoFocus
         />
         <input
-          type="number"
+          type="text"
+          inputMode="numeric"
           min="1"
-          value={quantity}
-          onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+          max="9999"
+          value={quantityInput}
+          onChange={(e) => setQuantityInput(e.target.value)}
+          onBlur={() => { if (!quantityInput || parseInt(quantityInput, 10) < 1) setQuantityInput("1"); }}
           className="form-input quantity-input"
+          aria-label="Quantity"
         />
         <button type="submit" className="btn btn-primary">
           Add

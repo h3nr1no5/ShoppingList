@@ -105,7 +105,8 @@ class ListItemBase(BaseModel):
 
 class ListItemCreate(ListItemBase):
     """Schema for creating a list item."""
-    pass
+    model_config = ConfigDict(from_attributes=True)
+    quantity: int = Field(1, ge=1, le=9999)
 
 
 class ListItemUpdate(BaseModel):
