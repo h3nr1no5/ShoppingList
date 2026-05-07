@@ -116,7 +116,6 @@ const ListDetail: React.FC = () => {
         });
       } catch (err: unknown) {
         console.error('Failed to update item:', err);
-        showToast('Failed to update item.', 'error');
       }
     }
   };
@@ -139,7 +138,6 @@ const ListDetail: React.FC = () => {
         await apiClientNoRedirect.delete(`/items/${itemId}`);
       } catch (err) {
         console.error('Failed to delete item:', err);
-        showToast('Failed to delete item.', 'error');
       }
     }
   };
@@ -164,7 +162,6 @@ const handleEditItem = async (itemId: string, name: string, quantity: number): P
         await apiClientNoRedirect.put(`/items/${itemId}`, { name, quantity });
       } catch (err: unknown) {
         console.error('Failed to edit item:', err);
-        showToast('Failed to edit item.', 'error');
       }
     }
   };

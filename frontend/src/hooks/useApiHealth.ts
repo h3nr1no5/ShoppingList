@@ -77,8 +77,9 @@ export function useApiHealth(options: UseApiHealthOptions = {}) {
 
       if (!mountedRef.current) return;
 
-      // Don't treat abort errors as disconnects if we aborted due to unmount
+      // Treat abort errors (timeout or superseded by new check) as disconnected
       if (error instanceof Error && error.name === 'AbortError') {
+        handleStatusChange('disconnected');
         return;
       }
 

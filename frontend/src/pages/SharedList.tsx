@@ -76,9 +76,7 @@ const SharedList: React.FC = () => {
           };
         });
       } catch (err: unknown) {
-        const axiosErr = err as { response?: { status?: number; data?: { detail?: string } } };
-        const detail = axiosErr.response?.data?.detail;
-        console.error('Failed to add item:', { status: axiosErr.response?.status, detail });
+        console.error('Failed to add item:', err);
         // Keep the item locally — no revert
       }
     }
@@ -110,17 +108,7 @@ const SharedList: React.FC = () => {
           params: { share_code: shareCode },
         });
       } catch (err: unknown) {
-        const axiosErr = err as { response?: { status?: number; data?: { detail?: string } } };
-        const status = axiosErr.response?.status;
-        const detail = axiosErr.response?.data?.detail;
-        console.error('Failed to update item:', { status, detail, shareCode, itemId });
-        if (status === 401) {
-          setError('Not authorized. The share link may have expired.');
-        } else if (status === 404) {
-          setError('Item not found.');
-        } else {
-          setError(detail || 'Failed to update item');
-        }
+        console.error('Failed to update item:', err);
       }
     }
   };
@@ -144,10 +132,7 @@ const handleDeleteItem = async (itemId: string): Promise<void> => {
         params: { share_code: shareCode },
       });
     } catch (err: unknown) {
-      const axiosErr = err as { response?: { status?: number; data?: { detail?: string } } };
-      const detail = axiosErr.response?.data?.detail;
-      console.error('Failed to delete item:', { status: axiosErr.response?.status, detail });
-      setError(detail || 'Failed to delete item');
+      console.error('Failed to delete item:', err);
     }
   }
 };
@@ -173,17 +158,7 @@ const handleEditItem = async (itemId: string, name: string, quantity: number): P
           params: { share_code: shareCode },
         });
       } catch (err: unknown) {
-        const axiosErr = err as { response?: { status?: number; data?: { detail?: string } } };
-        const status = axiosErr.response?.status;
-        const detail = axiosErr.response?.data?.detail;
-        console.error('Failed to edit item:', { status, detail, shareCode, itemId });
-        if (status === 401) {
-          setError('Not authorized. The share link may have expired.');
-        } else if (status === 404) {
-          setError('Item not found.');
-        } else {
-          setError(detail || 'Failed to edit item');
-        }
+        console.error('Failed to edit item:', err);
       }
     }
   };
