@@ -4,6 +4,7 @@ import { useAuth } from './hooks/useAuth';
 import { ThemeProvider } from './context/ThemeContext';
 import { ToastProvider } from './context/ToastContext';
 import { useToastContext } from './context/useToastContext';
+import { ApiHealthProvider } from './context/ApiHealthContext';
 import { ToastContainer } from './components/ToastContainer';
 import Home from './pages/Home';
 import ListDetail from './pages/ListDetail';
@@ -72,8 +73,10 @@ const App: React.FC = () => {
       <AuthProvider>
         <ThemeProvider>
           <ToastProvider>
-            <AppRoutes />
-            <ToastContainerWrapper />
+            <ApiHealthProvider>
+              <AppRoutes />
+              <ToastContainerWrapper />
+            </ApiHealthProvider>
           </ToastProvider>
         </ThemeProvider>
       </AuthProvider>

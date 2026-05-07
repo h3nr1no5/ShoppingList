@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { type ShoppingList, type ListItem as ListItemType } from '../types';
+import { useApiHealthContext } from '../context/ApiHealthContext';
 import apiClient from '../api/client';
 import Header from '../components/Header';
 import ListItem from '../components/ListItem';
@@ -8,6 +9,8 @@ import ItemForm from '../components/ItemForm';
 
 const SharedList: React.FC = () => {
   const { shareCode } = useParams<{ shareCode: string }>();
+  // isConnected available for future offline-disabled UI
+  void useApiHealthContext();
   const [list, setList] = useState<ShoppingList | null>(null);
   const [loadingList, setLoadingList] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -36,6 +39,25 @@ const SharedList: React.FC = () => {
   const handleAddItem = async (name: string, quantity: number): Promise<void> => {
     if (!list) return;
 
+    // Local-only temporary ID
+    const tempId = `temp-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    const newItem: ListItemType = {
+      id: tempId,
+      list_id: list.id,
+      name,
+      quantity,
+      is_checked: false,
+      sort_order: (list.items ?? []).length,
+      created_at: new Date().toISOString(),
+    };
+
+    // Update UI immediately
+    setList(prev => {
+      if (!prev) return prev;
+      return { ...prev, items: [...(prev.items ?? []), newItem] };
+    });
+
+    // Fire API in background — no revert on failure
     try {
       const response = await apiClient.post<ListItemType>(`/lists/${list.id}/items`, {
         name,
@@ -43,15 +65,21 @@ const SharedList: React.FC = () => {
       }, {
         params: { share_code: shareCode },
       });
-      setList({
-        ...list,
-        items: [...(list.items ?? []), response.data],
+      // Replace temp ID with real one from server
+      setList(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          items: (prev.items ?? []).map(item =>
+            item.id === tempId ? response.data : item
+          ),
+        };
       });
     } catch (err: unknown) {
       const axiosErr = err as { response?: { status?: number; data?: { detail?: string } } };
       const detail = axiosErr.response?.data?.detail;
       console.error('Failed to add item:', { status: axiosErr.response?.status, detail });
-      setError(detail || 'Failed to add item');
+      // Keep the item locally — no revert
     }
   };
 
@@ -83,16 +111,6 @@ const SharedList: React.FC = () => {
       const status = axiosErr.response?.status;
       const detail = axiosErr.response?.data?.detail;
       console.error('Failed to update item:', { status, detail, shareCode, itemId });
-      // Revert on error
-      setList(prev => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          items: (prev.items ?? []).map(item =>
-            item.id === itemId ? { ...item, is_checked: !isChecked } : item
-          )
-        };
-      });
       if (status === 401) {
         setError('Not authorized. The share link may have expired.');
       } else if (status === 404) {
@@ -106,13 +124,19 @@ const SharedList: React.FC = () => {
 const handleDeleteItem = async (itemId: string): Promise<void> => {
   if (!list) return;
 
+  // Remove item from local state immediately
+  setList(prev => {
+    if (!prev) return prev;
+    return {
+      ...prev,
+      items: (prev.items ?? []).filter((item) => item.id !== itemId),
+    };
+  });
+
+  // Fire API in background
   try {
     await apiClient.delete(`/items/${itemId}`, {
       params: { share_code: shareCode },
-    });
-    setList({
-      ...list,
-      items: (list.items ?? []).filter((item) => item.id !== itemId),
     });
   } catch (err: unknown) {
     const axiosErr = err as { response?: { status?: number; data?: { detail?: string } } };
@@ -125,9 +149,6 @@ const handleDeleteItem = async (itemId: string): Promise<void> => {
 const handleEditItem = async (itemId: string, name: string, quantity: number): Promise<void> => {
     if (!list) return;
 
-    // Store original item for revert
-    const originalItem = (list.items ?? []).find((item) => item.id === itemId);
-    
     // Optimistically update UI using functional state
     setList(prev => {
       if (!prev) return prev;
@@ -148,18 +169,6 @@ const handleEditItem = async (itemId: string, name: string, quantity: number): P
       const status = axiosErr.response?.status;
       const detail = axiosErr.response?.data?.detail;
       console.error('Failed to edit item:', { status, detail, shareCode, itemId });
-      // Revert on error
-      if (originalItem) {
-        setList(prev => {
-          if (!prev) return prev;
-          return {
-            ...prev,
-            items: (prev.items ?? []).map(item =>
-              item.id === itemId ? originalItem : item
-            )
-          };
-        });
-      }
       if (status === 401) {
         setError('Not authorized. The share link may have expired.');
       } else if (status === 404) {

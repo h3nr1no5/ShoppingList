@@ -7,6 +7,7 @@ import { AuthContext } from '../context/AuthContext';
 import { ThemeContext } from '../context/ThemeContext';
 import { ToastProvider } from '../context/ToastContext';
 import { useToastContext } from '../context/useToastContext';
+import { ApiHealthContext } from '../context/ApiHealthContext';
 import { ToastContainer } from '../components/ToastContainer';
 
 // Mock the apiClient
@@ -73,19 +74,21 @@ const renderWithAuth = (ui: React.ReactElement, isAuthenticated = true) => {
       <ThemeContext.Provider value={{ theme: 'light', toggleTheme: vi.fn() }}>
         <ToastProvider>
           <ToastContainerWrapper>
-            <AuthContext.Provider
-              value={{
-                isAuthenticated,
-                user: isAuthenticated ? { id: 'user-1', email: 'test@example.com' } : null,
-                token: isAuthenticated ? 'mock-token' : null,
-                login: vi.fn(),
-                register: vi.fn(),
-                logout: vi.fn(),
-                loading: false,
-              }}
-            >
-              {ui}
-            </AuthContext.Provider>
+            <ApiHealthContext.Provider value={{ status: 'connected', isConnected: true }}>
+              <AuthContext.Provider
+                value={{
+                  isAuthenticated,
+                  user: isAuthenticated ? { id: 'user-1', email: 'test@example.com' } : null,
+                  token: isAuthenticated ? 'mock-token' : null,
+                  login: vi.fn(),
+                  register: vi.fn(),
+                  logout: vi.fn(),
+                  loading: false,
+                }}
+              >
+                {ui}
+              </AuthContext.Provider>
+            </ApiHealthContext.Provider>
           </ToastContainerWrapper>
         </ToastProvider>
       </ThemeContext.Provider>
