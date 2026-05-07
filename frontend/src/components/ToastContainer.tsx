@@ -1,4 +1,5 @@
 import type { Toast } from '../hooks/useToast';
+import { useState, useCallback } from 'react';
 import './ToastContainer.css';
 
 interface ToastContainerProps {
@@ -6,30 +7,59 @@ interface ToastContainerProps {
   dismissToast: (id: number) => void;
 }
 
+function getToastIcon(type: 'success' | 'error' | 'warning'): string {
+  return type === 'success' ? '✓' : type === 'error' ? '✗' : '⚠';
+}
+
 export function ToastContainer({ toasts, dismissToast }: ToastContainerProps) {
+  const [exitingIds, setExitingIds] = useState<Set<number>>(new Set());
+
+  const handleDismiss = useCallback((id: number) => {
+    setExitingIds((prev) => new Set(prev).add(id));
+  }, []);
+
+  const handleAnimationEnd = useCallback((id: number) => {
+    setExitingIds((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+    dismissToast(id);
+  }, [dismissToast]);
+
+  // FIX: Check toasts.length instead of visibleToasts.length
+  // This ensures we render exiting toasts so their exit animation plays
   if (toasts.length === 0) {
     return null;
   }
 
   return (
     <div className="toast-container" aria-live="polite" aria-label="Notifications">
-      {toasts.map((toast) => (
-        <div
-          key={toast.id}
-          className={`toast toast-${toast.type}`}
-          role="alert"
-          aria-atomic="true"
-        >
-          <span className="toast-message">{toast.message}</span>
-          <button
-            className="toast-close"
-            onClick={() => dismissToast(toast.id)}
-            aria-label="Dismiss notification"
+      {toasts.map((toast) => {
+        const isExiting = exitingIds.has(toast.id);
+
+        return (
+          <div
+            key={toast.id}
+            className={`toast toast-${toast.type}${isExiting ? ' toast-exit' : ''}`}
+            role="alert"
+            aria-atomic="true"
+            onAnimationEnd={() => isExiting && handleAnimationEnd(toast.id)}
           >
-            ×
-          </button>
-        </div>
-      ))}
+            <span className="toast-icon" aria-hidden="true">
+              {getToastIcon(toast.type)}
+            </span>
+            <span className="toast-message">{toast.message}</span>
+            <button
+              className="toast-close"
+              onClick={() => handleDismiss(toast.id)}
+              aria-label="Dismiss notification"
+            >
+              ×
+            </button>
+          </div>
+        );
+      })}
     </div>
   );
 }
