@@ -2,7 +2,7 @@ import React from 'react';
 import { useApiHealth, type ApiHealthStatus } from '../hooks/useApiHealth';
 import { useToastContext } from './useToastContext';
 
-interface ApiHealthContextValue {
+export interface ApiHealthContextValue {
   status: ApiHealthStatus;
   isConnected: boolean;
 }
@@ -33,12 +33,4 @@ export function ApiHealthProvider({ children }: { children: React.ReactNode }) {
       {children}
     </ApiHealthContext.Provider>
   );
-}
-
-export function useApiHealthContext(): ApiHealthContextValue {
-  const context = React.useContext(ApiHealthContext);
-  if (!context) {
-    throw new Error('useApiHealthContext must be used within an ApiHealthProvider');
-  }
-  return context;
 }

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { type ShoppingList, type ListItem as ListItemType } from '../types';
-import { useApiHealthContext } from '../context/ApiHealthContext';
+import { useApiHealthContext } from '../context/useApiHealthContext';
 import apiClient, { apiClientNoRedirect } from '../api/client';
 import { useOfflineQueue } from '../hooks/useOfflineQueue';
 import Header from '../components/Header';

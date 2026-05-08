@@ -1,6 +1,6 @@
 import { render, act } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { useOfflineQueue, type DistributiveOmit, type PendingChange, type PendingToggle, type PendingAdd } from './useOfflineQueue';
+import { useOfflineQueue, type DistributiveOmit, type PendingChange, type PendingAdd } from './useOfflineQueue';
 
 // Test component that uses the hook and exposes values via callback
 const TestComponent = ({

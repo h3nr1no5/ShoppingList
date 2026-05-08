@@ -2,7 +2,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { BrowserRouter } from 'react-router-dom';
 import ListDetail from './ListDetail';
-import { type ShoppingList, type ListItem } from '../types';
+import { type ShoppingList } from '../types';
 import { AuthContext } from '../context/AuthContext';
 import { ThemeContext } from '../context/ThemeContext';
 import { ToastProvider } from '../context/ToastContext';
