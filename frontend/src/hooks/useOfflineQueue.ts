@@ -35,7 +35,7 @@ export interface PendingAdd {
 
 export type PendingChange = PendingToggle | PendingEdit | PendingDelete | PendingAdd;
 
-type DistributiveOmit<T, K extends keyof any> = T extends any ? Omit<T, K> : never;
+type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
 
 const STORAGE_KEY_PREFIX = 'pending_changes_';
 

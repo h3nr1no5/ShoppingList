@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useToastContext } from '../context/useToastContext';
-import { useApiHealthContext } from '../context/ApiHealthContext';
+import { useApiHealthContext } from '../context/useApiHealthContext';
 import { type ShoppingList, type ListItem as ListItemType } from '../types';
 import apiClient, { generateShareLink, apiClientNoRedirect } from '../api/client';
 import { useOfflineQueue } from '../hooks/useOfflineQueue';

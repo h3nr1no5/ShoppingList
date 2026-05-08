@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
-import { useApiHealthContext } from '../context/ApiHealthContext';
+import { useApiHealthContext } from '../context/useApiHealthContext';
 
 const Header: React.FC = () => {
   const { user, isAuthenticated, logout } = useAuth();
