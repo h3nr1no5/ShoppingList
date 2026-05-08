@@ -7,9 +7,10 @@ import ConfirmDialog from './ConfirmDialog';
 interface ShoppingListCardProps {
   list: ShoppingList;
   onDelete?: (id: string) => void;
+  disabled?: boolean;
 }
 
-const ShoppingListCard: React.FC<ShoppingListCardProps> = ({ list, onDelete }) => {
+const ShoppingListCard: React.FC<ShoppingListCardProps> = ({ list, onDelete, disabled = false }) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const itemCount = list.items?.length || 0;
   const checkedCount = list.items?.filter((item) => item.is_checked).length || 0;
@@ -39,7 +40,7 @@ const ShoppingListCard: React.FC<ShoppingListCardProps> = ({ list, onDelete }) =
           </span>
         </div>
       </div>
-      {onDelete && (
+      {onDelete && !disabled && (
         <button
           onClick={(e) => {
             e.preventDefault();
@@ -54,7 +55,7 @@ const ShoppingListCard: React.FC<ShoppingListCardProps> = ({ list, onDelete }) =
     </Link>
   );
 
-  if (!onDelete) {
+  if (!onDelete || disabled) {
     return cardContent;
   }
 

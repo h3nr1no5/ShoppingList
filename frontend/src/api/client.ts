@@ -3,44 +3,54 @@ import { getApiBaseUrl } from '../config/api';
 
 const API_BASE_URL = getApiBaseUrl();
 
-const apiClient = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
+function createApiClient(withRedirectInterceptor: boolean) {
+  const client = axios.create({
+    baseURL: API_BASE_URL,
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
 
-// Request interceptor to add JWT token
-apiClient.interceptors.request.use(
-  (config: InternalAxiosRequestConfig) => {
-    const token = localStorage.getItem('token');
-    if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
-// Response interceptor to handle 401 errors
-apiClient.interceptors.response.use(
-  (response) => response,
-  (error: AxiosError) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      // Don't redirect if already on login or register page
-      if (!window.location.pathname.startsWith('/login') &&
-          !window.location.pathname.startsWith('/register')) {
-        window.location.href = '/login';
+  // Request interceptor to add JWT token
+  client.interceptors.request.use(
+    (config: InternalAxiosRequestConfig) => {
+      const token = localStorage.getItem('token');
+      if (token && config.headers) {
+        config.headers.Authorization = `Bearer ${token}`;
       }
+      return config;
+    },
+    (error) => {
+      return Promise.reject(error);
     }
-    return Promise.reject(error);
+  );
+
+  if (withRedirectInterceptor) {
+    // Response interceptor to handle 401 errors (only on standard client)
+    client.interceptors.response.use(
+      (response) => response,
+      (error: AxiosError) => {
+        if (error.response?.status === 401) {
+          localStorage.removeItem('token');
+          // Don't redirect if already on login or register page
+          if (!window.location.pathname.startsWith('/login') &&
+              !window.location.pathname.startsWith('/register')) {
+            window.location.href = '/login';
+          }
+        }
+        return Promise.reject(error);
+      }
+    );
   }
-);
+
+  return client;
+}
+
+const apiClient = createApiClient(true);
+const apiClientNoRedirect = createApiClient(false);
 
 export default apiClient;
+export { apiClientNoRedirect };
 
 // Helper function for authenticated fetch requests
 export async function authFetch(url: string, options: RequestInit = {}): Promise<Response> {

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useToastContext } from '../context/useToastContext';
+import { useApiHealthContext } from '../context/ApiHealthContext';
 import { type ShoppingList } from '../types';
 import apiClient from '../api/client';
 import Header from '../components/Header';
@@ -11,6 +12,7 @@ import ListForm from '../components/ListForm';
 const Home: React.FC = () => {
   const { isAuthenticated, loading } = useAuth();
   const { showToast } = useToastContext();
+  const { isConnected } = useApiHealthContext();
   const navigate = useNavigate();
   const [lists, setLists] = useState<ShoppingList[]>([]);
   const [showForm, setShowForm] = useState(false);
@@ -86,6 +88,7 @@ const Home: React.FC = () => {
           <button
             onClick={() => setShowForm(!showForm)}
             className="btn btn-primary"
+            disabled={!isConnected}
           >
             {showForm ? 'Cancel' : '+ New List'}
           </button>
@@ -113,6 +116,7 @@ const Home: React.FC = () => {
                 key={list.id}
                 list={list}
                 onDelete={handleDeleteList}
+                disabled={!isConnected}
               />
             ))}
           </div>
