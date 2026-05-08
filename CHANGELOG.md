@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Offline queue** — Item mutations made while offline are queued in localStorage and auto-synced on reconnect
+  - `useOfflineQueue` hook for managing pending changes
+  - `ListDetail` and `SharedList` pages integrate queue + sync
+  - Error differentiation: 404 (skip), 401 (notify), transient (retry)
+  - Post-sync re-fetch for state reconciliation
+  - 19 new tests for offline queue behavior
+
 ### Changed
 
 ### Deprecated
@@ -16,6 +23,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 
 ### Fixed
+
+- Offline item updates no longer lost on page refresh or reconnect
+- Failed online API calls now enqueue changes for retry
 
 ### Security
 

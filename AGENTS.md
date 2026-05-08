@@ -33,6 +33,7 @@ cd frontend && npm run lint    # eslint
 - **No migration system** — `Base.metadata.create_all` on startup. Add new models to `models.py` directly.
 - **Vite proxies `/api` → `http://localhost:8000`** — `VITE_API_URL` in `.env` is optional and rarely needed.
 - **`bcrypt<4.1` pinned** — newer versions break passlib compatibility.
+- **Offline queue uses localStorage** — `useOfflineQueue` hook stores pending changes under `pending_changes_{listId}`. No size limit enforcement yet. Changes persist across page refreshes but not across browser storage clears.
 
 ## Architecture
 
@@ -82,4 +83,5 @@ cd infra && azd deploy --all    # deploy only
 - `backend/database.py` — async engine + session setup
 - `frontend/src/api/client.ts` — API client
 - `frontend/src/App.tsx` — router + auth context
+- `frontend/src/hooks/useOfflineQueue.ts` — offline mutation queue hook
 - `infra/main.bicep` — Azure infrastructure
