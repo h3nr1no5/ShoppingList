@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { useTranslation } from 'react-i18next';
 import { useToastContext } from '../context/useToastContext';
 import { useApiHealthContext } from '../context/useApiHealthContext';
 import { type ShoppingList } from '../types';
@@ -11,6 +12,7 @@ import ListForm from '../components/ListForm';
 
 const Home: React.FC = () => {
   const { isAuthenticated, loading } = useAuth();
+  const { t } = useTranslation();
   const { showToast } = useToastContext();
   const { isConnected } = useApiHealthContext();
   const navigate = useNavigate();
@@ -26,7 +28,7 @@ const Home: React.FC = () => {
       setLists(response.data);
     } catch (err) {
       console.error('Failed to fetch lists:', err);
-      showToast("Couldn't load your lists. Please try again.", 'error');
+      showToast(t('errors.failed_to_load_lists'), 'error');
     } finally {
       setLoadingLists(false);
     }
@@ -54,7 +56,7 @@ const Home: React.FC = () => {
       setShowForm(false);
     } catch (err) {
       console.error('Failed to create list:', err);
-      showToast('Failed to create list. Please try again.', 'error');
+      showToast(t('errors.failed_to_create_list'), 'error');
     }
   };
 
@@ -64,7 +66,7 @@ const Home: React.FC = () => {
       setLists(lists.filter((list) => list.id !== id));
     } catch (err) {
       console.error('Failed to delete list:', err);
-      showToast('Failed to delete list. Please try again.', 'error');
+      showToast(t('errors.failed_to_delete_list'), 'error');
     }
   };
 
@@ -73,7 +75,7 @@ const Home: React.FC = () => {
       <div className="page">
         <Header />
         <div className="loading-container">
-          <div className="loading">Loading...</div>
+          <div className="loading">{t('common.loading')}</div>
         </div>
       </div>
     );
@@ -84,13 +86,13 @@ const Home: React.FC = () => {
       <Header />
       <main className="main">
         <div className="page-header">
-          <h1 className="page-title">My Shopping Lists</h1>
+          <h1 className="page-title">{t('list.my_shopping_lists')}</h1>
           <button
             onClick={() => setShowForm(!showForm)}
             className="btn btn-primary"
             disabled={!isConnected}
           >
-            {showForm ? 'Cancel' : '+ New List'}
+            {showForm ? t('common.cancel') : t('list.new_list')}
           </button>
         </div>
 
@@ -102,12 +104,12 @@ const Home: React.FC = () => {
 
         {loadingLists ? (
           <div className="loading-container">
-            <div className="loading">Loading lists...</div>
+            <div className="loading">{t('list.loading_lists')}</div>
           </div>
         ) : lists.length === 0 ? (
           <div className="empty-state">
-            <p>No shopping lists yet.</p>
-            <p>Create your first list to get started!</p>
+            <p>{t('list.no_lists_yet')}</p>
+            <p>{t('list.create_first_list')}</p>
           </div>
         ) : (
           <div className="lists-grid">

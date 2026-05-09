@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { useTranslation } from 'react-i18next';
 import { useToastContext } from '../context/useToastContext';
 import { useApiHealthContext } from '../context/useApiHealthContext';
 import { type ShoppingList, type ListItem as ListItemType } from '../types';
@@ -16,6 +17,7 @@ const ListDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { isAuthenticated, loading } = useAuth();
   const { showToast } = useToastContext();
+  const { t } = useTranslation();
   const { isConnected } = useApiHealthContext();
   const navigate = useNavigate();
   const [list, setList] = useState<ShoppingList | null>(null);
@@ -35,7 +37,7 @@ const ListDetail: React.FC = () => {
       setList(response.data);
     } catch (err) {
       console.error('Failed to fetch list:', err);
-      showToast("Couldn't load the list.", 'error');
+      showToast(t('errors.failed_to_load_list'), 'error');
     } finally {
       setLoadingList(false);
     }
@@ -108,7 +110,7 @@ const ListDetail: React.FC = () => {
         if (httpStatus === 401) {
           // Auth token expired — notify user and stop
           console.error('Authentication failed during sync:', err);
-          showToast('Session expired. Please log in again.', 'error');
+          showToast(t('errors.session_expired'), 'error');
           return;
         }
 
@@ -292,7 +294,7 @@ const ListDetail: React.FC = () => {
       setShowEditForm(false);
     } catch (err) {
       console.error('Failed to update list:', err);
-      showToast('Failed to update list.', 'error');
+      showToast(t('errors.failed_to_update_list'), 'error');
     }
   };
 
@@ -305,7 +307,7 @@ const ListDetail: React.FC = () => {
       return shareCode;
     } catch (err) {
       console.error('Failed to generate share link:', err);
-      showToast('Failed to generate share link.', 'error');
+      showToast(t('errors.failed_to_generate_share_link'), 'error');
       return null;
     }
   };
@@ -315,7 +317,7 @@ const ListDetail: React.FC = () => {
       <div className="page">
         <Header />
         <div className="loading-container">
-          <div className="loading">Loading...</div>
+          <div className="loading">{t('common.loading')}</div>
         </div>
       </div>
     );
@@ -326,7 +328,7 @@ const ListDetail: React.FC = () => {
       <div className="page">
         <Header />
         <div className="loading-container">
-          <div className="loading">Loading list...</div>
+          <div className="loading">{t('list.loading_list')}</div>
         </div>
       </div>
     );
@@ -350,7 +352,7 @@ const ListDetail: React.FC = () => {
       <main className="main">
         <div className="page-header page-header--compact">
           <button onClick={() => navigate('/')} className="btn btn-back">
-            ← Back
+            {t('list.back_arrow')}
           </button>
           <h1 className="page-title">{list.name}</h1>
           <button
@@ -358,7 +360,7 @@ const ListDetail: React.FC = () => {
             className="btn btn-secondary"
             disabled={!isConnected}
           >
-            Share
+            {t('list.share')}
           </button>
         </div>
 
@@ -376,13 +378,13 @@ const ListDetail: React.FC = () => {
             className="btn btn-link edit-list-btn"
             disabled={!isConnected}
           >
-            Edit list name
+            {t('list.edit_list_name')}
           </button>
         )}
 
         <div className="list-progress">
           <span>
-            {checkedCount} of {totalCount} items checked
+            {t('list.checked_progress', { checkedCount, totalCount })}
           </span>
           {totalCount > 0 && (
             <div className="progress-bar">
@@ -399,8 +401,8 @@ const ListDetail: React.FC = () => {
 
           {(list.items ?? []).length === 0 ? (
             <div className="empty-state">
-              <p>No items in this list.</p>
-              <p>Add your first item above!</p>
+              <p>{t('item.no_items')}</p>
+              <p>{t('item.add_first_item')}</p>
             </div>
           ) : (
             (list.items ?? [])

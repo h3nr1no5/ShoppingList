@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import './ConfirmDialog.css';
 
 interface ConfirmDialogProps {
@@ -15,11 +16,14 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   isOpen,
   title,
   message,
-  confirmText = 'Delete',
-  cancelText = 'Cancel',
+  confirmText,
+  cancelText,
   onConfirm,
   onCancel,
 }) => {
+  const { t } = useTranslation();
+  const resolvedConfirmText = confirmText ?? t('common.delete');
+  const resolvedCancelText = cancelText ?? t('common.cancel');
   // ESC key support
   useEffect(() => {
     if (!isOpen) return;
@@ -50,10 +54,10 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
         <p id="confirm-dialog-message" className="confirm-message">{message}</p>
         <div className="confirm-actions">
           <button className="btn btn-secondary" onClick={onCancel} autoFocus>
-            {cancelText}
+            {resolvedCancelText}
           </button>
           <button className="btn btn-danger" onClick={onConfirm}>
-            {confirmText}
+            {resolvedConfirmText}
           </button>
         </div>
       </div>

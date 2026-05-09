@@ -1,3 +1,5 @@
+import { Suspense } from 'react';
+import { useTranslation } from 'react-i18next';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { useAuth } from './hooks/useAuth';
@@ -16,11 +18,12 @@ import './index.css';
 // Protected route wrapper
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
+  const { t } = useTranslation();
 
   if (loading) {
     return (
       <div className="page page-center">
-        <div className="loading">Loading...</div>
+        <div className="loading">{t('common.loading')}</div>
       </div>
     );
   }
@@ -74,7 +77,9 @@ const App: React.FC = () => {
         <ThemeProvider>
           <ToastProvider>
             <ApiHealthProvider>
-              <AppRoutes />
+              <Suspense fallback={<div className="page page-center"><div className="loading">Loading...</div></div>}>
+                <AppRoutes />
+              </Suspense>
               <ToastContainerWrapper />
             </ApiHealthProvider>
           </ToastProvider>
