@@ -116,7 +116,7 @@ const Swipeable: React.FC<SwipeableProps> = ({ children, onSwipe, onSwipeRight, 
   }, [isSwiped, resetSwipe]);
 
   return (
-    <div className={`swipeable-wrapper ${className}`}>
+    <div className={`swipeable-wrapper ${className}${(isSwiping || isSwiped) ? ' swiping-active' : ''}`}>
       <div className="swipeable-edit-bg" aria-hidden="true">✏️</div>
       <div className="swipeable-delete-bg" aria-hidden="true">🗑️</div>
       <div
