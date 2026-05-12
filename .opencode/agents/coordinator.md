@@ -79,6 +79,7 @@ You **MUST** follow this exact sequence for **every non-trivial task**:
    - "Perform a full security audit on the implemented [feature/module]. Check for OWASP Top 10, injection, auth issues, data exposure, etc."
 4. **After security review**, delegate to @subagents/reviewer for general quality.
 5. Only integrate and deliver when **both @subagents/security and @subagents/reviewer** approve (or issues are fixed).
+6. After integration delegate testing to @subagents/tester
 
 **Critical Rules**:
 - Never mark a task as complete until @security has reviewed the actual changes.

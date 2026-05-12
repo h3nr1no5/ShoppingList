@@ -120,8 +120,8 @@ resource apiContainerApp 'Microsoft.App/containerApps@2022-03-01' = {
           name: '${envName}-api'
           image: apiImage
           resources: {
-            cpu: json('0.5')
-            memory: '1Gi'
+            cpu: json('0.25')
+            memory: '0.5Gi'
           }
         }
       ]
@@ -131,6 +131,20 @@ resource apiContainerApp 'Microsoft.App/containerApps@2022-03-01' = {
           value: containerRegistry.listCredentials().passwords[0].value
         }
       ]
+      scale: {
+        minReplicas: 0
+        maxReplicas: 10
+        rules: [
+          {
+            name: 'http-scaling'
+            http: {
+              metadata: {
+                concurrentRequests: '10'
+              }
+            }
+          }
+        ]
+      }
     }
   }
 }
@@ -173,8 +187,8 @@ resource webContainerApp 'Microsoft.App/containerApps@2022-03-01' = {
           name: '${envName}-web'
           image: webImage
           resources: {
-            cpu: json('0.5')
-            memory: '1Gi'
+            cpu: json('0.25')
+            memory: '0.5Gi'
           }
         }
       ]
@@ -184,6 +198,20 @@ resource webContainerApp 'Microsoft.App/containerApps@2022-03-01' = {
           value: containerRegistry.listCredentials().passwords[0].value
         }
       ]
+      scale: {
+        minReplicas: 0
+        maxReplicas: 10
+        rules: [
+          {
+            name: 'http-scaling'
+            http: {
+              metadata: {
+                concurrentRequests: '10'
+              }
+            }
+          }
+        ]
+      }
     }
   }
 }
@@ -207,7 +235,7 @@ resource postgresServer 'Microsoft.DBforPostgreSQL/flexibleServers@2023-03-01-pr
       mode: 'Disabled'
     }
     backup: {
-      backupRetentionDays: 7
+      backupRetentionDays: 1
       geoRedundantBackup: 'Disabled'
     }
   }
