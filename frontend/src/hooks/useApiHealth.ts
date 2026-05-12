@@ -21,6 +21,16 @@ export function useApiHealth(options: UseApiHealthOptions = {}) {
   // Previous status ref to detect transitions
   const prevStatusRef = useRef<ApiHealthStatus>('checking');
 
+  // Refs for callbacks to keep them stable across renders
+  const onDisconnectRef = useRef(onDisconnect);
+  const onReconnectRef = useRef(onReconnect);
+
+  // Keep refs updated after every render (NOT in a deps array)
+  useEffect(() => {
+    onDisconnectRef.current = onDisconnect;
+    onReconnectRef.current = onReconnect;
+  });
+
   // Handle status transitions with callbacks
   const handleStatusChange = useCallback(
     (newStatus: ApiHealthStatus) => {
@@ -28,15 +38,15 @@ export function useApiHealth(options: UseApiHealthOptions = {}) {
 
       // Only trigger callbacks on actual transitions, not initial state
       if (previousStatus === 'connected' && newStatus === 'disconnected') {
-        onDisconnect?.();
+        onDisconnectRef.current?.();
       } else if (previousStatus === 'disconnected' && newStatus === 'connected') {
-        onReconnect?.();
+        onReconnectRef.current?.();
       }
 
       prevStatusRef.current = newStatus;
       setStatus(newStatus);
     },
-    [onDisconnect, onReconnect]
+    [] // Stable: refs and setState are stable across renders
   );
 
   const checkHealth = useCallback(async () => {
@@ -49,6 +59,7 @@ export function useApiHealth(options: UseApiHealthOptions = {}) {
     
     if (!healthUrl) {
       console.error('Cannot construct health URL: VITE_API_URL is not set');
+      abortRef.current = null; // Clean up any stale ref before early return
       handleStatusChange('disconnected');
       return;
     }
@@ -61,6 +72,7 @@ export function useApiHealth(options: UseApiHealthOptions = {}) {
       const response = await fetch(healthUrl, {
         method: 'GET',
         signal: controller.signal,
+        cache: 'no-store',
       });
 
       clearTimeout(timeoutId);
@@ -68,7 +80,15 @@ export function useApiHealth(options: UseApiHealthOptions = {}) {
       if (!mountedRef.current) return;
 
       if (response.ok) {
-        handleStatusChange('connected');
+        // Don't report connected if browser says we're offline.
+        // This prevents a race condition where an in-flight health check
+        // response arrives after the 'offline' event has already fired.
+        const isOnline = typeof navigator !== 'undefined' && navigator.onLine;
+        if (isOnline) {
+          handleStatusChange('connected');
+        } else {
+          handleStatusChange('disconnected');
+        }
       } else {
         handleStatusChange('disconnected');
       }
@@ -77,8 +97,9 @@ export function useApiHealth(options: UseApiHealthOptions = {}) {
 
       if (!mountedRef.current) return;
 
-      // Don't treat abort errors as disconnects if we aborted due to unmount
+      // Treat abort errors (timeout or superseded by new check) as disconnected
       if (error instanceof Error && error.name === 'AbortError') {
+        handleStatusChange('disconnected');
         return;
       }
 
@@ -92,6 +113,8 @@ export function useApiHealth(options: UseApiHealthOptions = {}) {
   }, [handleStatusChange]);
 
   useEffect(() => {
+    mountedRef.current = true; // Must reset on (re-)mount for React Strict Mode compatibility
+
     // Perform initial health check using IIFE to avoid set-state-in-effect warning
     (async () => {
       await checkHealth();
@@ -112,6 +135,8 @@ export function useApiHealth(options: UseApiHealthOptions = {}) {
 
     const handleOffline = () => {
       if (mountedRef.current) {
+        // Abort in-flight health checks when going offline
+        abortRef.current?.abort();
         handleStatusChange('disconnected');
       }
     };

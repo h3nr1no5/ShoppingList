@@ -1,32 +1,17 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
-import { useApiHealth } from '../hooks/useApiHealth';
-import { useToastContext } from '../context/useToastContext';
+import { useApiHealthContext } from '../context/useApiHealthContext';
 
 const Header: React.FC = () => {
   const { user, isAuthenticated, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const { showToast, dismissAll } = useToastContext();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Wrap callbacks in useCallback to stabilize references for useApiHealth
-  const handleDisconnect = useCallback(() => {
-    showToast('Connection lost. Please check your internet.', 'error');
-  }, [showToast]);
-
-  const handleReconnect = useCallback(() => {
-    showToast('Back online!', 'success');
-    dismissAll();
-  }, [showToast, dismissAll]);
-
-  const { status } = useApiHealth({
-    onDisconnect: handleDisconnect,
-    onReconnect: handleReconnect,
-  });
+  const { status } = useApiHealthContext();
 
   const handleLogout = (): void => {
     logout();
