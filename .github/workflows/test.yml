@@ -132,3 +132,82 @@ jobs:
 
       - name: Cleanup .env
         run: rm -f frontend/.env
+
+  frontend-e2e:
+    if: github.base_ref == 'main'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: shoppinglist
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Create Python venv and install backend deps
+        working-directory: backend
+        run: |
+          python -m venv venv
+          source venv/bin/activate
+          pip install -r requirements.txt
+
+      - name: Install frontend deps
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      - name: Start backend server
+        working-directory: backend
+        run: |
+          source venv/bin/activate
+          nohup bash ci-run.sh > /tmp/backend.log 2>&1 &
+          echo "Waiting for backend..."
+          for i in $(seq 1 30); do
+            if curl -s http://localhost:8000/health > /dev/null 2>&1; then
+              echo "Backend ready"
+              break
+            fi
+            sleep 2
+          done
+        env:
+          SECRET_KEY: ci-secret-key-for-e2e-tests
+          REGISTRATION_KEY: ci-reg-key-for-e2e-tests
+
+      - name: Run Playwright E2E tests
+        run: npx playwright test
+        env:
+          E2E_INVITE_CODE: ci-reg-key-for-e2e-tests
+          REGISTRATION_KEY: ci-reg-key-for-e2e-tests
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: frontend/playwright-report/
+          retention-days: 7
