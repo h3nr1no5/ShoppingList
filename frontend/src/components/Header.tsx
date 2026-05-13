@@ -1,25 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import i18n from '../i18n/i18n';
 import { useAuth } from '../hooks/useAuth';
-import { useTheme } from '../hooks/useTheme';
 import { useApiHealthContext } from '../context/useApiHealthContext';
+import ThemeToggle from './ThemeToggle';
+import LanguageToggle from './LanguageToggle';
 
 const Header: React.FC = () => {
   const { t } = useTranslation();
   const { user, isAuthenticated, logout } = useAuth();
-  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-
-  const currentLang = i18n.language?.startsWith('hu') ? 'hu' : 'en';
-
-  const toggleLanguage = (): void => {
-    const newLang = i18n.language?.startsWith('hu') ? 'en' : 'hu';
-    i18n.changeLanguage(newLang);
-  };
 
   const { status } = useApiHealthContext();
 
@@ -84,21 +76,8 @@ const Header: React.FC = () => {
 
         {/* Desktop nav — hidden on mobile via CSS */}
         <nav className="nav">
-          <button
-            onClick={toggleTheme}
-            className="btn btn-icon theme-toggle"
-            aria-label={theme === 'light' ? t('nav.switch_to_dark') : t('nav.switch_to_light')}
-            title={theme === 'light' ? t('nav.switch_to_dark') : t('nav.switch_to_light')}
-          >
-            {theme === 'light' ? '🌙' : '☀️'}
-          </button>
-          <button
-            onClick={toggleLanguage}
-            className="btn btn-icon lang-toggle"
-            title={currentLang === 'hu' ? t('nav.switch_to_english') : t('nav.switch_to_hungarian')}
-          >
-            {currentLang === 'hu' ? 'EN' : 'HU'}
-          </button>
+          <LanguageToggle />
+          <ThemeToggle />
           {isAuthenticated ? (
             <div className="user-menu">
               <span className="user-email">{user?.email}</span>
@@ -157,14 +136,10 @@ const Header: React.FC = () => {
           </button>
         </div>
         <div className="nav-mobile-items">
-          <button
-            onClick={() => {
-              toggleTheme();
-            }}
-            className="btn btn-secondary"
-          >
-            {theme === 'light' ? `🌙 ${t('nav.dark_mode')}` : `☀️ ${t('nav.light_mode')}`}
-          </button>
+          <div className="mobile-toggle-row">
+            <LanguageToggle />
+            <ThemeToggle />
+          </div>
           {isAuthenticated ? (
             <div className="user-menu">
               <span className="user-email">{user?.email}</span>
