@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from 'react-i18next';
 import { useToastContext } from '../context/useToastContext';
+import ThemeToggle from '../components/ThemeToggle';
+import LanguageToggle from '../components/LanguageToggle';
 
 const Register: React.FC = () => {
   const { register, isAuthenticated, loading: authLoading } = useAuth();
@@ -63,14 +65,22 @@ const Register: React.FC = () => {
 
   if (authLoading) {
     return (
-      <div className="page page-center">
+      <div className="page page-center page-auth">
+        <div className="auth-toolbar">
+          <LanguageToggle />
+          <ThemeToggle />
+        </div>
         <div className="loading">{t('common.loading')}</div>
       </div>
     );
   }
 
   return (
-    <div className="page page-center">
+    <div className="page page-center page-auth">
+      <div className="auth-toolbar">
+        <LanguageToggle />
+        <ThemeToggle />
+      </div>
       <div className="auth-container">
         <div className="auth-header">
           <h1 className="auth-title">{t('auth.create_account')}</h1>

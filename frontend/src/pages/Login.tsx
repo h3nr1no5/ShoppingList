@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from 'react-i18next';
 import { useToastContext } from '../context/useToastContext';
+import ThemeToggle from '../components/ThemeToggle';
+import LanguageToggle from '../components/LanguageToggle';
 
 const Login: React.FC = () => {
   const { login, isAuthenticated, loading } = useAuth();
@@ -48,14 +50,22 @@ const Login: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="page page-center">
+      <div className="page page-center page-auth">
+        <div className="auth-toolbar">
+          <LanguageToggle />
+          <ThemeToggle />
+        </div>
         <div className="loading">{t('common.loading')}</div>
       </div>
     );
   }
 
   return (
-    <div className="page page-center">
+    <div className="page page-center page-auth">
+      <div className="auth-toolbar">
+        <LanguageToggle />
+        <ThemeToggle />
+      </div>
       <div className="auth-container">
         <div className="auth-header">
           <h1 className="auth-title">{t('auth.welcome_back')}</h1>
