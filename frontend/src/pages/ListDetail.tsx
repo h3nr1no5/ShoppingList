@@ -158,6 +158,15 @@ const ListDetail: React.FC = () => {
   const handleAddItem = async (name: string, quantity: number): Promise<void> => {
     if (!list) return;
 
+    // Check for duplicate name (case-insensitive)
+    const duplicate = (list.items ?? []).some(
+      item => item.name.trim().toLowerCase() === name.trim().toLowerCase()
+    );
+    if (duplicate) {
+      showToast(t('errors.item_name_exists'), 'error');
+      return;
+    }
+
     // Local-only temporary ID
     const tempId = `temp-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
     const newItem: ListItemType = {
@@ -258,6 +267,15 @@ const ListDetail: React.FC = () => {
 
   const handleEditItem = async (itemId: string, name: string, quantity: number): Promise<void> => {
     if (!list) return;
+
+    // Check for duplicate name (case-insensitive), excluding current item
+    const duplicate = (list.items ?? []).some(
+      item => item.id !== itemId && item.name.trim().toLowerCase() === name.trim().toLowerCase()
+    );
+    if (duplicate) {
+      showToast(t('errors.item_name_exists'), 'error');
+      return;
+    }
 
     // Optimistically update UI using functional state
     setList(prev => {

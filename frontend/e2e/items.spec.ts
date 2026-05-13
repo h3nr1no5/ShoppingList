@@ -122,4 +122,47 @@ test.describe('Item management', () => {
       await expect(authedPage.locator(`text=${itemName}`)).not.toBeVisible();
     });
   });
+
+  test.describe('Duplicate names', () => {
+    test('adding an item with an existing name succeeds', async ({ authedPage }) => {
+      const itemName = `Dupe Add ${Date.now()}`;
+      await authedPage.goto(`/lists/${listId}`);
+
+      // Add first item
+      await authedPage.fill('[placeholder="Add new item..."]', itemName);
+      await authedPage.click('button:has-text("Add")');
+      await expect(authedPage.locator('.list-item').filter({ hasText: itemName })).toHaveCount(1);
+
+      // Add same name again
+      await authedPage.fill('[placeholder="Add new item..."]', itemName);
+      await authedPage.click('button:has-text("Add")');
+      // Second add should be rejected by frontend duplicate validation
+      await expect(authedPage.getByText('An item with this name already exists')).toBeVisible();
+      await expect(authedPage.locator('.list-item').filter({ hasText: itemName })).toHaveCount(1);
+    });
+
+    test('renaming an item to an existing name succeeds', async ({ authedPage }) => {
+      const base = `Dupe Rename ${Date.now()}`;
+      const nameA = `${base} A`;
+      const nameB = `${base} B`;
+      await authedPage.goto(`/lists/${listId}`);
+
+      // Add two items with different names
+      await authedPage.fill('[placeholder="Add new item..."]', nameA);
+      await authedPage.click('button:has-text("Add")');
+      await authedPage.fill('[placeholder="Add new item..."]', nameB);
+      await authedPage.click('button:has-text("Add")');
+
+      // Rename B to A's name
+      const itemRow = authedPage.locator('.list-item').filter({ hasText: nameB });
+      await itemRow.locator('button[title="Edit item"]').click();
+      await authedPage.fill('[aria-label="Item name"]', nameA);
+      await authedPage.click('button[title="Save changes"]');
+
+      // Rename should be rejected by frontend duplicate validation — items retain distinct names
+      await expect(authedPage.getByText('An item with this name already exists')).toBeVisible();
+      await expect(authedPage.locator('.list-item').filter({ hasText: nameA })).toHaveCount(1);
+      await expect(authedPage.locator('.list-item').filter({ hasText: nameB })).toHaveCount(1);
+    });
+  });
 });

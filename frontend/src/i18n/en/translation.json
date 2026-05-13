@@ -121,7 +121,8 @@
     "could_not_validate_credentials": "Could not validate credentials",
     "only_owner_can_generate_share_code": "Only the list owner can generate a share code",
     "an_error_occurred_during_registration": "An error occurred during registration",
-    "failed_to_generate_share_link_api": "Failed to generate share link"
+    "failed_to_generate_share_link_api": "Failed to generate share link",
+    "item_name_exists": "An item with this name already exists in this list"
   },
   "toasts": {
     "connection_lost": "Connection lost. Please check your internet.",
