@@ -33,7 +33,7 @@ export default defineConfig({
     {
       command: 'cd ../backend && bash run.sh',
       port: 8000,
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: true,
       timeout: 120000,
       stdout: 'pipe',
       stderr: 'pipe',
