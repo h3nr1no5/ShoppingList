@@ -451,8 +451,8 @@ body {
   gap: var(--spacing-md);
   padding: var(--spacing-md);
   background-color: var(--bg-primary);
-  border-radius: var(--radius-md);
   border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
   transition: background-color var(--transition-fast);
 }
 
@@ -1130,8 +1130,10 @@ body {
 /* Swipeable (for touch delete) */
 .swipeable-wrapper {
   position: relative;
+}
+
+.swipeable-wrapper.swiping-active {
   overflow: hidden;
-  border-radius: var(--radius-lg);
 }
 
 .shopping-list-card.swipeable-card {
@@ -1259,6 +1261,17 @@ body {
   .shopping-list-card:hover .btn-delete,
   .list-item:hover .btn-delete-item {
     opacity: 1;
+  }
+
+  /* Hide edit/delete buttons on mobile — swipe gestures handle both actions */
+  .btn-delete-item,
+  .btn-edit-item {
+    display: none;
+  }
+
+  .list-item {
+    padding: var(--spacing-sm);
+    gap: var(--spacing-sm);
   }
 
   .auth-container {

@@ -22,7 +22,7 @@ jobs:
     environment: production  # Requires approval for production
     
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install azd
         uses: Azure/setup-azd@v1.0.0

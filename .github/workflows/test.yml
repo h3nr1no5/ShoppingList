@@ -25,7 +25,7 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -54,10 +54,10 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: "20"
           cache: "npm"
@@ -80,10 +80,10 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: "20"
           cache: "npm"
@@ -100,3 +100,35 @@ jobs:
         env:
           # VITE_API_URL is read from .env file by Vite during build
           VITE_API_URL: https://test-api.example.com
+
+  deploy-check:
+    if: github.base_ref == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install Azure CLI
+        run: |
+          curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+
+      - name: Validate Bicep templates
+        run: |
+          az bicep build --file infra/main.bicep
+          echo "✅ Bicep templates compiled successfully"
+
+      - name: Build backend Docker image (validation only)
+        run: |
+          docker build -t backend-test ./backend
+          echo "✅ Backend Docker image built successfully"
+
+      - name: Create .env for frontend build
+        run: |
+          echo "VITE_API_URL=https://test.example.com" > frontend/.env
+
+      - name: Build frontend Docker image (validation only)
+        run: |
+          docker build -t frontend-test ./frontend
+          echo "✅ Frontend Docker image built successfully"
+
+      - name: Cleanup .env
+        run: rm -f frontend/.env

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { type ShoppingList } from '../types';
 
 interface ListFormProps {
@@ -8,6 +9,7 @@ interface ListFormProps {
 }
 
 const ListForm: React.FC<ListFormProps> = ({ onSubmit, initialData, onCancel }) => {
+  const { t } = useTranslation();
   const [name, setName] = useState(initialData?.name || '');
 
   const handleSubmit = (e: React.FormEvent): void => {
@@ -21,7 +23,7 @@ const ListForm: React.FC<ListFormProps> = ({ onSubmit, initialData, onCancel }) 
     <form onSubmit={handleSubmit} className="form">
       <div className="form-group">
         <label htmlFor="listName" className="form-label">
-          List Name
+          {t('list.list_name')}
         </label>
         <input
           type="text"
@@ -29,7 +31,7 @@ const ListForm: React.FC<ListFormProps> = ({ onSubmit, initialData, onCancel }) 
           value={name}
           onChange={(e) => setName(e.target.value)}
           className="form-input"
-          placeholder="Enter list name"
+          placeholder={t('list.enter_list_name')}
           required
         />
       </div>
@@ -37,11 +39,11 @@ const ListForm: React.FC<ListFormProps> = ({ onSubmit, initialData, onCancel }) 
       <div className="form-actions">
         {onCancel && (
           <button type="button" onClick={onCancel} className="btn btn-secondary">
-            Cancel
+            {t('common.cancel')}
           </button>
         )}
         <button type="submit" className="btn btn-primary">
-          {initialData ? 'Update List' : 'Create List'}
+          {initialData ? t('list.update_list') : t('list.create_list')}
         </button>
       </div>
     </form>

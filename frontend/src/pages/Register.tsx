@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { useTranslation } from 'react-i18next';
 import { useToastContext } from '../context/useToastContext';
 
 const Register: React.FC = () => {
   const { register, isAuthenticated, loading: authLoading } = useAuth();
+  const { t } = useTranslation();
   const { showToast } = useToastContext();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
@@ -23,12 +25,12 @@ const Register: React.FC = () => {
     e.preventDefault();
 
     if (password !== confirmPassword) {
-      showToast('Passwords do not match. Please check both fields.', 'error');
+      showToast(t('errors.passwords_do_not_match'), 'error');
       return;
     }
 
     if (password.length < 8) {
-      showToast('Password must be at least 8 characters long.', 'error');
+      showToast(t('errors.password_too_short'), 'error');
       return;
     }
 
@@ -38,11 +40,21 @@ const Register: React.FC = () => {
       await register({ email, password, invite_code: inviteCode });
       navigate('/');
     } catch (err: unknown) {
-      const errorMessage =
+      const errorDetail =
         err && typeof err === 'object' && 'response' in err
-          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail ||
-            'Registration failed'
-          : 'Registration failed. Please try again.';
+          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+          : undefined;
+
+      let errorMessage: string;
+      if (errorDetail === 'Invalid invite code') {
+        errorMessage = t('errors.invalid_invite_code');
+      } else if (errorDetail === 'Email already registered') {
+        errorMessage = t('errors.email_already_registered');
+      } else if (errorDetail === 'An error occurred during registration') {
+        errorMessage = t('errors.an_error_occurred_during_registration');
+      } else {
+        errorMessage = t('errors.registration_failed_generic');
+      }
       showToast(errorMessage, 'error');
     } finally {
       setSubmitting(false);
@@ -52,7 +64,7 @@ const Register: React.FC = () => {
   if (authLoading) {
     return (
       <div className="page page-center">
-        <div className="loading">Loading...</div>
+        <div className="loading">{t('common.loading')}</div>
       </div>
     );
   }
@@ -61,14 +73,14 @@ const Register: React.FC = () => {
     <div className="page page-center">
       <div className="auth-container">
         <div className="auth-header">
-          <h1 className="auth-title">Create Account</h1>
-          <p className="auth-subtitle">Get started with your shopping lists</p>
+          <h1 className="auth-title">{t('auth.create_account')}</h1>
+          <p className="auth-subtitle">{t('auth.create_account')}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="auth-form">
           <div className="form-group">
             <label htmlFor="inviteCode" className="form-label">
-              Invite Code
+              {t('auth.invite_code')}
             </label>
             <input
               type="text"
@@ -76,14 +88,14 @@ const Register: React.FC = () => {
               value={inviteCode}
               onChange={(e) => setInviteCode(e.target.value)}
               className="form-input"
-              placeholder="Enter invite code"
+              placeholder={t('auth.enter_invite_code')}
               autoComplete="off"
             />
           </div>
 
           <div className="form-group">
             <label htmlFor="email" className="form-label">
-              Email
+              {t('auth.email')}
             </label>
             <input
               type="email"
@@ -91,7 +103,7 @@ const Register: React.FC = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="form-input"
-              placeholder="you@example.com"
+              placeholder={t('auth.email_placeholder')}
               required
               autoComplete="email"
             />
@@ -99,7 +111,7 @@ const Register: React.FC = () => {
 
           <div className="form-group">
             <label htmlFor="password" className="form-label">
-              Password
+              {t('auth.password')}
             </label>
             <input
               type="password"
@@ -107,7 +119,7 @@ const Register: React.FC = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="form-input"
-              placeholder="••••••••"
+              placeholder={t('auth.password_placeholder')}
               required
               autoComplete="new-password"
               minLength={8}
@@ -116,7 +128,7 @@ const Register: React.FC = () => {
 
           <div className="form-group">
             <label htmlFor="confirmPassword" className="form-label">
-              Confirm Password
+              {t('auth.confirm_password')}
             </label>
             <input
               type="password"
@@ -124,7 +136,7 @@ const Register: React.FC = () => {
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               className="form-input"
-              placeholder="••••••••"
+              placeholder={t('auth.password_placeholder')}
               required
               autoComplete="new-password"
               minLength={8}
@@ -136,14 +148,14 @@ const Register: React.FC = () => {
             className="btn btn-primary btn-full"
             disabled={submitting}
           >
-            {submitting ? 'Creating account...' : 'Create Account'}
+            {submitting ? t('auth.creating_account') : t('auth.create_account')}
           </button>
         </form>
 
         <p className="auth-footer">
-          Already have an account?{' '}
+          {t('auth.already_have_account')}{' '}
           <Link to="/login" className="auth-link">
-            Sign In
+            {t('auth.sign_in')}
           </Link>
         </p>
       </div>

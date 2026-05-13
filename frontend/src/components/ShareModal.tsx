@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface ShareModalProps {
   isOpen: boolean;
@@ -13,6 +14,7 @@ const ShareModal: React.FC<ShareModalProps> = ({
   onClose,
   onGenerateShareLink,
 }) => {
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [generationError, setGenerationError] = useState<string | null>(null);
@@ -51,10 +53,10 @@ const ShareModal: React.FC<ShareModalProps> = ({
     try {
       const result = await onGenerateShareLink();
       if (result === null) {
-        setGenerationError('Failed to generate share link. Please try again.');
+        setGenerationError(t('share.failed_generate_share_link'));
       }
     } catch {
-      setGenerationError('Failed to generate share link. Please try again.');
+      setGenerationError(t('share.failed_generate_share_link'));
     } finally {
       setGenerating(false);
     }
@@ -64,7 +66,7 @@ const ShareModal: React.FC<ShareModalProps> = ({
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2 className="modal-title">Share List</h2>
+          <h2 className="modal-title">{t('share.share_list')}</h2>
           <button onClick={onClose} className="modal-close">
             ×
           </button>
@@ -74,7 +76,7 @@ const ShareModal: React.FC<ShareModalProps> = ({
           {shareCode ? (
             <>
               <p className="share-info">
-                Share this link to let others view your shopping list:
+                {t('share.share_instructions')}
               </p>
               <div className="share-url-container">
                 <input
@@ -88,25 +90,25 @@ const ShareModal: React.FC<ShareModalProps> = ({
                   onClick={handleCopy}
                   className="btn btn-secondary"
                 >
-                  {copied ? 'Copied!' : 'Copy'}
+                  {copied ? t('share.copied') : t('share.copy')}
                 </button>
               </div>
             </>
           ) : onGenerateShareLink ? (
             <div className="share-generate-container">
               {generating ? (
-                <p className="share-info">Generating share link...</p>
+                <p className="share-info">{t('share.generating_share_link')}</p>
               ) : (
                 <>
                   <p className="share-info">
-                    Generate a share link to let others view your shopping list.
+                    {t('share.share_instructions_generate')}
                   </p>
                   <button
                     onClick={handleGenerateShareLink}
                     className="btn btn-primary"
                     disabled={generating}
                   >
-                    Generate Share Link
+                    {t('share.generate_share_link')}
                   </button>
                   {generationError && (
                     <p className="share-error">{generationError}</p>
@@ -116,7 +118,7 @@ const ShareModal: React.FC<ShareModalProps> = ({
             </div>
           ) : (
             <p className="share-info">
-              Share link is not available for this list.
+              {t('share.share_not_available')}
             </p>
           )}
         </div>
