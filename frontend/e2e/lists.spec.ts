@@ -19,7 +19,7 @@ test.describe('Shopping list management', () => {
   });
 
   test.describe('Create list', () => {
-    test('creates a new list and shows it on home page', async ({ freshUser: { page, token } }) => {
+    test('creates a new list and shows it on home page', async ({ freshUser: { page } }) => {
       await page.goto('/');
 
       // Click "+ New List" button to open the form

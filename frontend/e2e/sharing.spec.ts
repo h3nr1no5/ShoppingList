@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures';
-import { createItem, createList, deleteList, generateShareCode } from './helpers/api';
+import { createList, deleteList, generateShareCode } from './helpers/api';
 
 let listId: string;
 let listName: string;
@@ -232,7 +232,6 @@ test.describe('List sharing', () => {
   });
 
   test.describe('Share modal interaction', () => {
-    let shareCode: string;
     let modalListId: string;
     let modalListName: string;
 
@@ -240,7 +239,7 @@ test.describe('List sharing', () => {
       modalListName = `Modal Test ${Date.now()}`;
       const list = await createList(authedRequest, '', modalListName);
       modalListId = list.id;
-      shareCode = await generateShareCode(authedRequest, '', modalListId);
+      await generateShareCode(authedRequest, '', modalListId);
     });
 
     test.afterAll(async ({ authedRequest }) => {

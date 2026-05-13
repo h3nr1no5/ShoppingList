@@ -3,10 +3,16 @@ import { registerUser, loginUser, createList, createItem, deleteList } from './h
 import { TEST_USER_EMAIL, TEST_USER_PASSWORD } from './helpers/config';
 import type { Page, BrowserContext } from '@playwright/test';
 
+type OfflineChange =
+  | { type: 'add'; itemId: string; name: string; quantity: number }
+  | { type: 'toggle'; itemId: string; is_checked: boolean }
+  | { type: 'edit'; itemId: string; name: string }
+  | { type: 'delete'; itemId: string };
+
 /**
  * Helper: read pending offline changes from localStorage for a given list.
  */
-async function loadQueue(listId: string, page: Page): Promise<unknown[]> {
+async function loadQueue(listId: string, page: Page): Promise<OfflineChange[]> {
   return page.evaluate((id) => {
     const data = localStorage.getItem(`pending_changes_${id}`);
     return data ? JSON.parse(data) : [];
@@ -93,7 +99,7 @@ test.describe.serial('Offline item operations', () => {
     await expect
       .poll(async () => {
         const changes = await loadQueue(listId, page);
-        return changes.some((c: any) => c.type === 'add' && c.name === 'Eggs');
+        return changes.some((c) => c.type === 'add' && c.name === 'Eggs');
       }, { timeout: 5000 })
       .toBe(true);
 
@@ -107,7 +113,7 @@ test.describe.serial('Offline item operations', () => {
     await expect
       .poll(async () => {
         const changes = await loadQueue(listId, page);
-        const entry = changes.find((c: any) => c.type === 'toggle');
+        const entry = changes.find((c) => c.type === 'toggle');
         return entry ? { itemId: entry.itemId, is_checked: entry.is_checked } : null;
       }, { timeout: 5000 })
       .toMatchObject({ itemId: expect.any(String), is_checked: true });
@@ -123,7 +129,7 @@ test.describe.serial('Offline item operations', () => {
     await expect
       .poll(async () => {
         const changes = await loadQueue(listId, page);
-        return changes.some((c: any) => c.type === 'edit' && c.name === 'Sourdough');
+        return changes.some((c) => c.type === 'edit' && c.name === 'Sourdough');
       }, { timeout: 5000 })
       .toBe(true);
 
@@ -137,14 +143,14 @@ test.describe.serial('Offline item operations', () => {
     await expect
       .poll(async () => {
         const changes = await loadQueue(listId, page);
-        return changes.some((c: any) => c.type === 'delete');
+        return changes.some((c) => c.type === 'delete');
       }, { timeout: 5000 })
       .toBe(true);
 
     // ── Verify all four change types are queued ──────────────
     const finalChanges = await loadQueue(listId, page);
     expect(finalChanges.length).toBe(4);
-    const types = (finalChanges as Array<{ type: string }>).map((c) => c.type).sort();
+    const types = finalChanges.map((c) => c.type).sort();
     expect(types).toEqual(['add', 'delete', 'edit', 'toggle']);
   });
 
@@ -226,7 +232,7 @@ test.describe.serial('Offline item operations', () => {
     await expect
       .poll(async () => {
         const changes = await loadQueue(listId, page);
-        return changes.some((c: any) => c.type === 'add' && c.name.toLowerCase() === 'milk');
+        return changes.some((c) => c.type === 'add' && c.name.toLowerCase() === 'milk');
       }, { timeout: 5000 })
       .toBe(false);
 
@@ -249,7 +255,7 @@ test.describe.serial('Offline item operations', () => {
     await expect
       .poll(async () => {
         const changes = await loadQueue(listId, page);
-        return changes.some((c: any) => c.type === 'edit' && c.name.toLowerCase() === 'milk');
+        return changes.some((c) => c.type === 'edit' && c.name.toLowerCase() === 'milk');
       }, { timeout: 5000 })
       .toBe(false);
 

@@ -1,6 +1,6 @@
 import { test as base } from '@playwright/test';
 import { type Page, type APIRequestContext } from '@playwright/test';
-import { registerUser, createList, loginUser } from '../helpers/api';
+import { registerUser, loginUser } from '../helpers/api';
 import { TEST_USER_EMAIL, TEST_USER_PASSWORD, getRandomEmail } from '../helpers/config';
 
 // Extend the base test with custom fixtures
