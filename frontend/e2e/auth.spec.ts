@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures';
-import { getRandomEmail, TEST_USER_PASSWORD, INVITE_CODE } from './helpers/config';
+import { getRandomEmail, TEST_USER_PASSWORD, INVITE_CODE, API_BASE_URL } from './helpers/config';
 
 test.describe('Authentication flows', () => {
 
@@ -58,7 +58,7 @@ test.describe('Authentication flows', () => {
       const password = TEST_USER_PASSWORD;
 
       // First register the user via API
-      const res = await page.request.post('http://localhost:8000/api/auth/register', {
+      const res = await page.request.post(`${API_BASE_URL}/auth/register`, {
         data: { email, password, invite_code: INVITE_CODE },
       });
       expect(res.ok()).toBeTruthy();
@@ -80,7 +80,7 @@ test.describe('Authentication flows', () => {
       const email = getRandomEmail();
 
       // Register user via API
-      const res = await page.request.post('http://localhost:8000/api/auth/register', {
+      const res = await page.request.post(`${API_BASE_URL}/auth/register`, {
         data: { email, password: TEST_USER_PASSWORD, invite_code: INVITE_CODE },
       });
       expect(res.ok()).toBeTruthy();

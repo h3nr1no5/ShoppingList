@@ -1,8 +1,9 @@
 import { test as setup } from '@playwright/test';
 import { registerUser } from './helpers/api';
-import { TEST_USER_EMAIL, TEST_USER_PASSWORD } from './helpers/config';
+import { TEST_USER_EMAIL, TEST_USER_PASSWORD, API_BASE_URL } from './helpers/config';
 
-const authFile = './e2e/.auth/user.json';
+const authFile = process.env.E2E_AUTH_FILE || './e2e/.auth/user.json';
+const BASE_ORIGIN = process.env.E2E_BASE_URL || 'http://localhost:5173';
 
 setup('authenticate as test user', async ({ request }) => {
   // Register the test user (safe to call if already exists — will fail and we'll fall back to login)
@@ -17,7 +18,7 @@ setup('authenticate as test user', async ({ request }) => {
   formData.append('username', TEST_USER_EMAIL);
   formData.append('password', TEST_USER_PASSWORD);
 
-  const loginRes = await request.post('http://localhost:8000/api/auth/login', {
+  const loginRes = await request.post(`${API_BASE_URL}/auth/login`, {
     data: formData.toString(),
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
   });
@@ -35,7 +36,7 @@ setup('authenticate as test user', async ({ request }) => {
     state: {
       origins: [
         {
-          origin: 'http://localhost:5173',
+          origin: BASE_ORIGIN,
           localStorage: [
             { name: 'token', value: token },
           ],
