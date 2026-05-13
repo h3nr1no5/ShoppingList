@@ -41,7 +41,7 @@ const ListDetail: React.FC = () => {
     } finally {
       setLoadingList(false);
     }
-  }, [id, showToast]);
+  }, [id, showToast, t]);
 
   const syncPendingChanges = useCallback(async (): Promise<void> => {
     const pending = getPending();
@@ -122,7 +122,7 @@ const ListDetail: React.FC = () => {
 
     // After all changes synced, re-fetch to reconcile state
     await fetchList();
-  }, [id, getPending, dequeue, fetchList]);
+  }, [id, getPending, dequeue, fetchList, showToast, t]);
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {

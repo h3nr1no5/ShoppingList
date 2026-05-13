@@ -32,7 +32,7 @@ const Home: React.FC = () => {
     } finally {
       setLoadingLists(false);
     }
-  }, [showToast]);
+  }, [showToast, t]);
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {

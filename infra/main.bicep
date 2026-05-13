@@ -143,6 +143,26 @@ resource apiContainerApp 'Microsoft.App/containerApps@2022-03-01' = {
               }
             }
           }
+          {
+            name: 'cpu-scaling'
+            custom: {
+              type: 'cpu'
+              metadata: {
+                type: 'Utilization'
+                value: '70'
+              }
+            }
+          }
+          {
+            name: 'memory-scaling'
+            custom: {
+              type: 'memory'
+              metadata: {
+                type: 'Utilization'
+                value: '70'
+              }
+            }
+          }
         ]
       }
     }
@@ -199,7 +219,7 @@ resource webContainerApp 'Microsoft.App/containerApps@2022-03-01' = {
         }
       ]
       scale: {
-        minReplicas: 0
+        minReplicas: 1
         maxReplicas: 10
         rules: [
           {

@@ -2,11 +2,12 @@ import React, { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import i18n from '../i18n/i18n';
 import { type ListItem as ListItemType } from '../types';
+import type { TFunction } from 'i18next';
 import Swipeable from './Swipeable';
 import ConfirmDialog from './ConfirmDialog';
 
 /** Formats a date string as relative time (e.g., "5m ago", "2h ago", "Jan 4") */
-function formatRelativeTime(dateString: string, t: (...args: any[]) => string): string {
+function formatRelativeTime(dateString: string, t: TFunction): string {
   const date = new Date(dateString);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();

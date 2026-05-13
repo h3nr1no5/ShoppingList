@@ -35,7 +35,7 @@ const SharedList: React.FC = () => {
     } finally {
       setLoadingList(false);
     }
-  }, [shareCode]);
+  }, [shareCode, t]);
 
   const syncPendingChanges = useCallback(async (): Promise<void> => {
     const pending = getPending();
@@ -119,7 +119,7 @@ const SharedList: React.FC = () => {
 
     // After all changes synced, re-fetch to reconcile state
     await fetchSharedList();
-  }, [shareCode, getPending, dequeue, list, fetchSharedList]);
+  }, [shareCode, getPending, dequeue, list, fetchSharedList, showToast, t]);
 
   useEffect(() => {
     if (shareCode && !initialFetchDone.current) {
