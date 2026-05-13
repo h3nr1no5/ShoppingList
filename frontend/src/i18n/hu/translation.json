@@ -121,7 +121,8 @@
     "could_not_validate_credentials": "Nem sikerült hitelesíteni a megadott adatokat",
     "only_owner_can_generate_share_code": "Csak a lista tulajdonosa hozhat létre megosztási kódot",
     "an_error_occurred_during_registration": "Hiba történt a regisztráció során",
-    "failed_to_generate_share_link_api": "Nem sikerült létrehozni a megosztási linket"
+    "failed_to_generate_share_link_api": "Nem sikerült létrehozni a megosztási linket",
+    "item_name_exists": "Ilyen nevű elem már létezik ebben a listában"
   },
   "toasts": {
     "connection_lost": "A kapcsolat megszakadt. Kérjük, ellenőrizd az internetkapcsolatodat.",

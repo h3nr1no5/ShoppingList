@@ -14,7 +14,7 @@ hooks:
 
   predeploy:
     shell: sh
-    run: ./infra/hooks/pre-deploy-check.sh
+    run: ./infra/hooks/set-env.sh && ./infra/hooks/pre-deploy-check.sh
     continueOnError: false  # Fail deployment if URL checks fail
 
 postdeploy:
