@@ -60,23 +60,6 @@ resource app 'Microsoft.App/containerApps@2023-05-01' = {
         external: true
         targetPort: 8000
         transport: 'auto'
-        healthProbes: [
-          {
-            type: 'Liveness'
-            path: '/health'
-            port: 8000
-            initialDelaySeconds: 30
-            periodSeconds: 30
-            failureThreshold: 3
-          }
-          {
-            type: 'Readiness'
-            path: '/health'
-            port: 8000
-            periodSeconds: 10
-            failureThreshold: 3
-          }
-        ]
       }
       registries: !empty(registryPassword) ? [
         {
@@ -119,6 +102,27 @@ resource app 'Microsoft.App/containerApps@2023-05-01' = {
               value: 'static'
             }
           ]
+          probes: [
+            {
+              type: 'Liveness'
+              httpGet: {
+                path: '/health'
+                port: 8000
+              }
+              initialDelaySeconds: 30
+              periodSeconds: 30
+              failureThreshold: 3
+            }
+            {
+              type: 'Readiness'
+              httpGet: {
+                path: '/health'
+                port: 8000
+              }
+              periodSeconds: 10
+              failureThreshold: 3
+            }
+          ]
         }
       ]
       scale: {
@@ -158,6 +162,15 @@ resource postgresServer 'Microsoft.DBforPostgreSQL/flexibleServers@2023-03-01-pr
       charset: 'UTF8'
       collation: 'en_US.UTF8'
     }
+  }
+}
+
+// PostgreSQL firewall rule to allow Azure services
+resource postgresFirewallRule 'Microsoft.DBforPostgreSQL/flexibleServers/firewallRules@2023-03-01-preview' = {
+  name: '${envName}-postgres/AllowAzureServices'
+  properties: {
+    startIpAddress: '0.0.0.0'
+    endIpAddress: '0.0.0.0'
   }
 }
 

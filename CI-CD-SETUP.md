@@ -2,9 +2,10 @@
 
 ## Overview
 
-Two GitHub Actions workflows:
-- `test.yml` — Runs on push/PR to `main` (tests, lint, build verification)
+Three GitHub Actions workflows:
+- `test.yml` — Runs on push/PR to `main` and `dev` (tests, lint, build verification, E2E)
 - `deploy.yml` — Runs on push to `main` (deploys to Azure)
+- `smoke.yml` — Scheduled smoke test that runs every 15 minutes against production
 
 ## Prerequisites
 
@@ -40,17 +41,20 @@ Two GitHub Actions workflows:
 ### test.yml
 - **Backend**: pytest with PostgreSQL 16 service container
 - **Frontend**: lint + tests
+- **Frontend-E2E**: Playwright E2E tests (runs on PR to `main` and `dev`)
 - **Bicep**: validates compilation
 
 ### deploy.yml
 
-1. **Checkout** code
-2. **Login to ghcr.io** via `docker/login-action` (uses `GITHUB_TOKEN`)
-3. **Build & push** Docker image to `ghcr.io/${{ github.repository }}:${{ github.sha }}`
+1. **Checkout** code (`actions/checkout@v5`)
+2. **Login to ghcr.io** via `docker/login-action@v3` (uses `GITHUB_TOKEN`)
+3. **Build & push** Docker image to `ghcr.io/${{ github.repository }}:${{ github.sha }}` (`docker/build-push-action@v6`)
 4. **Login to Azure** via OIDC (`azure/login@v2`)
 5. **Detect resource group** and container app name via Azure CLI
 6. **Update container app** via `az containerapp update` with new image + secrets
-7. **Smoke test**: health check (`/health`) + SPA check (`/`)
+7. **Get deployment URL** via Azure CLI
+8. **Setup Python** for smoke test script
+9. **Run smoke tests**: executes `python backend/smoke_test.py` against deployed URL with `SMOKE_BASE_URL` and `SMOKE_REGISTRATION_KEY`
 
 ## Troubleshooting
 

@@ -68,6 +68,9 @@ SECRET_KEY=your-generated-secret-key
 | `ALLOWED_ORIGINS` | Comma-separated list of allowed CORS origins | No | `http://localhost:5173` |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | JWT token expiration time | No | `30` |
 | `SQL_ECHO` | Enable SQL query logging | No | `false` |
+| `CI_RUN` | Enable CI mode (skips certain checks) | No | - |
+| `SMOKE_BASE_URL` | Base URL for smoke tests (used by smoke_test.py) | No | - |
+| `SMOKE_REGISTRATION_KEY` | Registration key for smoke tests (used by smoke_test.py) | No | - |
 
 ### Registration Key
 
@@ -79,7 +82,7 @@ REGISTRATION_KEY=[your-registration-key]
 
 ## Testing
 
-The test suite uses SQLite instead of PostgreSQL for isolation and speed. The test database file is created automatically in the backend directory.
+The test suite uses PostgreSQL via Docker for isolation and speed. Start PostgreSQL with `cd backend && docker compose up -d` before running tests.
 
 Run all tests:
 
@@ -92,7 +95,7 @@ Run specific test categories using markers:
 
 ```bash
 # Unit tests only
-pytest -m unit
+pytest tests/test_unit/
 
 # Integration tests only
 pytest -m integration
@@ -107,27 +110,41 @@ Run a specific test by name:
 pytest -v -k "test_login"
 ```
 
+### Smoke Tests
+
+Post-deployment smoke tests are available in `smoke_test.py`. They verify the full API surface:
+- Health endpoint, SPA serving, registration, login, list & item CRUD
+
+Usage:
+```bash
+python smoke_test.py <BASE_URL> <REGISTRATION_KEY>
+# Or via env vars:
+SMOKE_BASE_URL=<url> SMOKE_REGISTRATION_KEY=<key> python smoke_test.py
+```
+
 ## Azure Deployment
 
 ### Container App URL
 
-The backend is deployed as an Azure Container App:
+The backend is deployed as part of a single container app with the frontend:
 
-- **API URL**: https://shoppinglist-api.victorioushill-2f5d1c85.northeurope.azurecontainerapps.io/
-- **API Docs**: https://shoppinglist-api.victorioushill-2f5d1c85.northeurope.azurecontainerapps.io/docs
+- **URL**: https://shoppinglist-web.victorioushill-2f5d1c85.northeurope.azurecontainerapps.io/
+- **API Docs**: https://shoppinglist-web.victorioushill-2f5d1c85.northeurope.azurecontainerapps.io/docs
 
 ### Deploying to Azure
 
-The app uses Azure Developer CLI (`azd`) for deployment. From the `infra/` directory:
+The app uses GitHub Actions to deploy to Azure Container Apps. Push to `main` triggers the workflow which:
+1. Builds a Docker image (using the unified Dockerfile in the root directory)
+2. Pushes the image to ghcr.io
+3. Updates the container app with the new image
+4. Runs smoke tests against the deployed endpoint
+
+For initial provisioning:
 
 ```bash
-cd infra
-
-# Provision infrastructure (first time only)
+az login
+azd init
 azd provision
-
-# Deploy the backend service
-azd deploy --service api
 ```
 
 ### Secret Configuration
@@ -137,20 +154,15 @@ In Azure Container Apps, secrets are configured at the container app level. Set 
 - `SECRET_KEY` — JWT signing key (generate as shown above)
 - `REGISTRATION_KEY` — Set to your invite code
 
-Configure secrets via the Azure portal or Azure CLI:
-
-```bash
-azd env set SECRET_KEY "your-generated-secret-key"
-azd env set REGISTRATION_KEY "[your-registration-key]"
-```
+Secrets are passed to the Bicep template via GitHub Actions variables.
 
 ## API Documentation
 
 Interactive API documentation is available at:
 
-**Swagger UI**: https://shoppinglist-api.victorioushill-2f5d1c85.northeurope.azurecontainerapps.io/docs
+**Swagger UI**: https://shoppinglist-web.victorioushill-2f5d1c85.northeurope.azurecontainerapps.io/docs
 
-**ReDoc**: https://shoppinglist-api.victorioushill-2f5d1c85.northeurope.azurecontainerapps.io/redoc
+**ReDoc**: https://shoppinglist-web.victorioushill-2f5d1c85.northeurope.azurecontainerapps.io/redoc
 
 ## Architecture
 
@@ -158,8 +170,9 @@ Interactive API documentation is available at:
 - **Database**: PostgreSQL with async SQLAlchemy 2.0
 - **Authentication**: JWT via `python-jose`
 - **Password Hashing**: `bcrypt` (< 4.1)
-- **Database Driver**: `asyncpg` (production) / `aiosqlite` (tests)
+- **Database Driver**: `asyncpg`
 - **CORS**: Configurable via `ALLOWED_ORIGINS`
+- **Health Check**: `/health` endpoint returns 200 when healthy, 503 when database is unreachable
 
 ## Project Structure
 
@@ -173,6 +186,9 @@ backend/
 ├── database.py      # Database configuration
 ├── requirements.txt # Python dependencies
 ├── run.sh          # Local development script
+├── stop.sh         # Stop the development server
+├── ci-run.sh       # CI startup script (starts PostgreSQL, runs tests)
+├── smoke_test.py   # Post-deployment smoke tests
 └── docker-compose.yml  # PostgreSQL container
 ```
 

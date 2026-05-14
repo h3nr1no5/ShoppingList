@@ -16,11 +16,19 @@ cd frontend && bash run.sh       # installs deps + Vite dev server on :5173
 ## Dev Commands
 ```bash
 # Backend tests (requires PostgreSQL running via docker compose)
-cd backend && pytest                     # all tests
+cd backend && pytest                     # all tests (excludes smoke_test.py)
 cd backend && pytest tests/test_unit/    # unit only
 cd backend && pytest -m integration      # integration only
 cd backend && pytest -m security         # security only
 cd backend && pytest -v -k "test_name"   # single test
+
+# Smoke tests (post-deployment, requires running server)
+cd backend && python smoke_test.py       # run against local :8000
+# Or run via: bash run-e2e-tests.sh       # starts PostgreSQL + runs smoke tests
+
+# E2E tests (requires PostgreSQL)
+bash run-e2e-tests.sh                    # starts PostgreSQL, installs deps, runs Playwright
+cd frontend && npx playwright test       # run Playwright tests directly
 
 # Frontend
 cd frontend && npm run build   # tsc -b && vite build
@@ -32,14 +40,18 @@ cd frontend && npm run lint    # eslint
 - **`SECRET_KEY` required at import time** — `auth.py` reads it on module load, raises `RuntimeError` if missing. Must be in `.env` before starting server or running tests. Generate: `python -c 'import secrets; print(secrets.token_hex(32))'`
 - **Registration requires invite code** — protected by `REGISTRATION_KEY` env var. In Azure, passed as a secure Bicep parameter from GitHub Actions.
 - **Tests require PostgreSQL** — conftest.py uses PostgreSQL (not SQLite). Start with `cd backend && docker compose up -d`. Each test gets fresh tables via `setup_database` fixture (create_all → drop_all).
+- **`pytest.ini` ignores smoke_test.py** — `addopts = --ignore=smoke_test.py` prevents accidental runs during test suite execution.
 - **No migration system** — `Base.metadata.create_all` on startup. Add new models to `models.py` directly.
 - **`bcrypt<4.1` pinned** — newer versions break passlib compatibility.
 - **Offline queue uses localStorage** — `useOfflineQueue` hook stores pending changes under `pending_changes_{listId}`. No size limit enforcement yet. Changes persist across page refreshes but not across browser storage clears.
+- **Duplicate item names rejected** — adding or editing items with duplicate names within the same list is validated and rejected.
+- **Static files mounting checks for directory** — `main.py` checks if the static directory exists before mounting (allows running backend without built frontend in development).
 
 ## Architecture
 
 - Single-container deployment: FastAPI serves both the API (`/api/*`) and the frontend (static files at `/` with SPA fallback)
-- API routes: `/api/*` (auth, lists, items) and `/health` (health check)
+- API routes: `/api/*` (auth, lists, items) and `/health` (health check with DB connectivity)
+- `/health` returns 200 with `{"status": "healthy", "database": "ok"}` when healthy, 503 with `{"status": "degraded", "database": "unreachable"}` when DB is down
 - JWT auth via `python-jose`, passwords via `passlib` + `bcrypt`
 - Async SQLAlchemy 2.0 with `asyncpg` (PostgreSQL)
 - Share codes are UUIDs passed as `?share_code=...` query param
@@ -94,7 +106,11 @@ azd provision
 - `backend/auth.py` — JWT + password hashing
 - `backend/crud.py` — database operations
 - `backend/database.py` — async engine + session setup
+- `backend/smoke_test.py` — post-deployment smoke tests
+- `backend/ci-run.sh` — CI backend startup script
 - `frontend/src/api/client.ts` — API client
 - `frontend/src/App.tsx` — router + auth context
 - `frontend/src/hooks/useOfflineQueue.ts` — offline mutation queue hook
+- `frontend/e2e/` — Playwright E2E tests
+- `run-e2e-tests.sh` — convenience script for local E2E tests
 - `infra/main.bicep` — Azure infrastructure (single container app)

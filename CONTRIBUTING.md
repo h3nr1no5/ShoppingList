@@ -36,6 +36,9 @@ cd frontend && bash run.sh
 # Run frontend tests and linting
 cd frontend && npm run test:run
 cd frontend && npm run lint
+
+# Run E2E tests (requires PostgreSQL)
+bash run-e2e-tests.sh
 ```
 
 ## Code Style
@@ -181,6 +184,34 @@ Test conventions:
 - Co-locate tests with components using `.test.tsx` or `.test.ts`
 - Use the setup in `src/test/setup.ts` for test utilities
 - Mock API calls when testing components in isolation
+
+### E2E Tests
+
+The project uses Playwright for end-to-end browser tests:
+
+```bash
+# Run all E2E tests (starts PostgreSQL, installs deps, runs Playwright)
+bash run-e2e-tests.sh
+
+# Run a single test file
+bash run-e2e-tests.sh e2e/lists.spec.ts
+
+# Run against specific browser
+bash run-e2e-tests.sh --project=chromium
+
+# Run Playwright directly (requires PostgreSQL running)
+cd frontend && npx playwright test
+```
+
+E2E tests are located in `frontend/e2e/` and run automatically in CI on PRs to `main` and `dev` branches.
+
+### Smoke Tests
+
+Post-deployment smoke tests in `backend/smoke_test.py` verify the API surface:
+
+```bash
+python backend/smoke_test.py <BASE_URL> <REGISTRATION_KEY>
+```
 
 ## Commit Messages
 
