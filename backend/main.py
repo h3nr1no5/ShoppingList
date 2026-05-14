@@ -589,8 +589,11 @@ async def health_check():
 
 # Mount static files AFTER all API routes so /api/* and /health take priority
 STATIC_DIR = os.getenv("STATIC_DIR", "static")
-static_app = StaticFiles(directory=STATIC_DIR, html=True)
-app.mount("/", static_app, name="static")
+if os.path.isdir(STATIC_DIR):
+    static_app = StaticFiles(directory=STATIC_DIR, html=True)
+    app.mount("/", static_app, name="static")
+else:
+    logger.warning("Static directory '%s' not found — frontend SPA will not be served", STATIC_DIR)
 
 
 # ==================== App Startup ====================
