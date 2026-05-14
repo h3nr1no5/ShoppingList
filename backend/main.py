@@ -20,13 +20,14 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 from fastapi import FastAPI, Depends, HTTPException, status, Query
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database import get_db, init_db, DATABASE_URL
+from database import get_db, init_db, DATABASE_URL, AsyncSessionLocal
 from models import User, ShoppingList, ListItem
 from schemas import (
     UserCreate,
@@ -581,8 +582,27 @@ async def debug_db_endpoint(db: AsyncSession = Depends(get_db)):
 
 @app.get("/health", tags=["health"])
 async def health_check():
-    """Health check endpoint."""
-    return {"status": "healthy"}
+    """
+    Readiness health check endpoint.
+    Returns 200 only if the application and database are reachable.
+    Returns 503 if the database is unreachable (container will be restarted).
+    """
+    db_ok = False
+    try:
+        async with AsyncSessionLocal() as session:
+            await session.execute(text("SELECT 1"))
+            db_ok = True
+    except Exception as e:
+        logger.warning("Health check DB probe failed: %s", e)
+
+    status_code = 200 if db_ok else 503
+    return JSONResponse(
+        content={
+            "status": "healthy" if db_ok else "degraded",
+            "database": "ok" if db_ok else "unreachable",
+        },
+        status_code=status_code,
+    )
 
 
 # ==================== Static File Serving ====================
