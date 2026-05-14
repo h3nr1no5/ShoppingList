@@ -30,7 +30,8 @@ The frontend runs on **http://localhost:5173**
 
 | Command | Description |
 |---------|-------------|
-| `npm run test` | Run Vitest test suite |
+| `npm run test` | Run Vitest test suite (watch mode) |
+| `npm run test:run` | Run Vitest test suite once (CI mode) |
 | `npm run dev` | Start Vite development server |
 | `npm run build` | Typecheck and build for production |
 | `npm run lint` | Run ESLint |
@@ -51,6 +52,24 @@ For local development, you don't need to set `VITE_API_URL` — the proxy handle
 - **Share Codes** — Share lists with others using unique codes
 - **Offline Queue** — Changes to items made while offline are queued in localStorage and automatically synced when the connection is restored
 - **Public Lists** — Make lists publicly accessible
+- **Internationalization** — English and Hungarian language support with language switcher
+- **Theme Toggle** — Switch between dark/light modes
+
+### E2E Tests
+
+Playwright E2E tests are located in the `e2e/` directory. Run them with:
+
+```bash
+cd frontend && npx playwright test
+```
+
+Or use the convenience script from the project root:
+
+```bash
+bash run-e2e-tests.sh
+```
+
+This script starts PostgreSQL, installs dependencies, and runs the E2E tests.
 
 ## Tech Stack
 
@@ -59,6 +78,7 @@ For local development, you don't need to set `VITE_API_URL` — the proxy handle
 - Vite
 - React Router
 - Axios (HTTP client)
+- i18next (internationalization)
 - Vitest + Testing Library (testing)
 
 ## Project Structure
@@ -68,14 +88,16 @@ frontend/
 ├── public/             # Static assets
 ├── src/
 │   ├── api/           # API client (axios)
-│   ├── components/    # React components
+│   ├── components/    # React components (LanguageToggle, ThemeToggle, etc.)
 │   ├── context/       # React contexts (Auth, Theme, Toast, ApiHealth)
 │   ├── hooks/         # Custom hooks (useAuth, useTheme, useOfflineQueue, etc.)
+│   ├── i18n/          # Internationalization (translations)
 │   ├── pages/         # Page components
 │   ├── test/          # Test setup
 │   ├── types/         # TypeScript interfaces
 │   ├── App.tsx        # Main app component
 │   └── main.tsx       # Entry point
+├── e2e/               # Playwright E2E tests
 ├── index.html         # HTML template
 └── vite.config.ts     # Vite configuration
 ```
@@ -126,6 +148,9 @@ Deployed as part of a single container app alongside the FastAPI backend. Push t
 ### API Not Connecting
 - Verify the backend is running (`cd backend && ./run.sh`)
 - Check that port 8000 is not in use
+
+### Duplicate Item Names
+- Adding or editing items with duplicate names within the same list is not allowed and will be rejected by the server.
 
 ## Offline Queue
 

@@ -11,7 +11,8 @@ A full-stack shopping list application with sharing capabilities. Built with Fas
 | **Database** | PostgreSQL (async via asyncpg) |
 | **Auth** | JWT (python-jose), bcrypt (passlib) |
 | **Infra** | Azure Container Apps, Azure Database for PostgreSQL, Bicep |
-| **CI/Testing** | pytest, pytest-asyncio, httpx, ESLint |
+| **CI/Testing** | pytest, pytest-asyncio, httpx, Playwright, ESLint |
+| **i18n** | i18next (English, Hungarian) |
 
 ## Project Structure
 
@@ -22,6 +23,7 @@ ShoppingList/
 ├── README.md              # Project overview (this file)
 ├── azure.yaml             # Azure Developer CLI configuration
 ├── Dockerfile             # Root multi-stage build (Node builds frontend → Python runtime)
+├── run-e2e-tests.sh       # E2E test runner script
 ├── backend/               # FastAPI backend (Python)
 │   ├── main.py            # App entry point & all API routes
 │   ├── models.py          # SQLAlchemy ORM models (User, ShoppingList, ListItem)
@@ -33,6 +35,7 @@ ShoppingList/
 │   ├── docker-compose.yml # Local PostgreSQL via Docker
 │   ├── run.sh             # Start script (creates venv, starts Postgres, runs uvicorn)
 │   ├── stop.sh            # Stop script
+│   ├── smoke_test.py      # Post-deployment smoke tests
 │   └── tests/             # Test suite
 │       ├── conftest.py    # Fixtures (authenticated clients, test data, clean DB)
 │       ├── test_unit/     # Unit tests
@@ -57,7 +60,9 @@ ShoppingList/
 │   │   │   └── ShareModal.tsx     # Share code modal
 │   │   ├── context/       # React contexts (Auth, Theme)
 │   │   ├── api/           # API client utilities
-│   │   └── types/         # TypeScript type definitions
+│   │   ├── types/         # TypeScript type definitions
+│   │   └── i18n/          # Internationalization (en, hu translations)
+│   ├── e2e/               # Playwright E2E tests
 │   ├── package.json       # Node dependencies
 │   ├── vite.config.ts     # Vite config (proxies /api to backend)
 │   └── run.sh             # Start script (installs deps, runs Vite)
@@ -74,6 +79,8 @@ ShoppingList/
 - **Sharing** — Generate UUID-based share codes to share lists with others
 - **Access Control** — Owner, share code, public list, or anonymous list (no owner)
 - **Dark Mode** — Theme switching via React context
+- **Theme Toggle** — Switch between dark and light modes
+- **Internationalization** — English and Hungarian language support with language switcher
 - **Responsive UI** — Mobile-friendly interface
 
 ## API Overview
@@ -175,11 +182,20 @@ cd frontend && bash run.sh         # installs deps, starts Vite dev server on :5
 Tests require PostgreSQL — conftest.py uses PostgreSQL (not SQLite). Start PostgreSQL via `cd backend && docker compose up -d` before running tests.
 
 ```bash
+# Backend tests (pytest)
 cd backend && pytest                         # all tests
 cd backend && pytest tests/test_unit/        # unit tests only
 cd backend && pytest -m integration          # integration tests only
 cd backend && pytest -m security             # security tests only
 cd backend && pytest -v -k "test_name"         # single test
+
+# E2E tests (requires PostgreSQL via Docker)
+bash run-e2e-tests.sh                          # run all E2E tests
+bash run-e2e-tests.sh --project=chromium       # single browser
+bash run-e2e-tests.sh e2e/lists.spec.ts        # single test file
+
+# Smoke tests (post-deployment verification)
+python backend/smoke_test.py <BASE_URL> <REGISTRATION_KEY>
 ```
 
 Fixtures in `conftest.py` provide authenticated clients, test data, and automatic DB cleanup.

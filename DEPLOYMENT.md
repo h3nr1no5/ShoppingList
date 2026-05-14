@@ -5,6 +5,12 @@
 Single container serving both API and frontend. FastAPI mounts the built React/Vite SPA at `/` with SPA fallback.
 Images hosted on GitHub Container Registry (ghcr.io).
 
+### Health Check
+
+The `/health` endpoint provides readiness/liveness probes:
+- Returns `200` with `{"status": "healthy", "database": "ok"}` when healthy
+- Returns `503` with `{"status": "degraded", "database": "unreachable"}` when DB is down
+
 ## Prerequisites
 
 - Azure CLI (`brew install azure-cli`)
@@ -67,12 +73,12 @@ azd init
 azd provision
 ```
 
-This creates: Resource group, Container Apps Environment, Container App (with nginx placeholder), PostgreSQL Flexible Server.
+This creates: Resource group, Container Apps Environment, Container App (serving FastAPI + React SPA), PostgreSQL Flexible Server.
 
 ## Deploy
 
 ### Automatic (CI/CD)
-Push to `main` → GitHub Actions deploys automatically.
+Push to `main` → GitHub Actions deploys automatically. The workflow runs `python backend/smoke_test.py` after deployment to verify the service is healthy.
 
 ### Manual (from Actions tab)
 GitHub → Actions → Deploy to Azure → Run workflow.
@@ -106,6 +112,15 @@ az containerapp show --name shoppinglistprod-app --resource-group rg-shoppinglis
 ### Check Logs
 ```bash
 az containerapp logs show --name shoppinglistprod-app --resource-group rg-shoppinglistprod --tail 50
+```
+
+### Smoke Tests
+Smoke tests run automatically after each deployment via the deploy workflow. Additionally, the `smoke.yml` scheduled workflow runs periodically to verify the service health.
+
+### Local E2E Tests
+Run local E2E tests with Playwright:
+```bash
+./run-e2e-tests.sh
 ```
 
 ### Clean Up

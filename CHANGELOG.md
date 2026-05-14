@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Smoke tests** — `backend/smoke_test.py` for post-deployment API validation
+  - Exercises: health, SPA serving, registration, login, list CRUD, item CRUD
+  - Runs via deploy workflow and scheduled `smoke.yml` workflow (every 15 min)
+  - Usable locally via `python backend/smoke_test.py <BASE_URL> <REGISTRATION_KEY>`
+- **E2E test suite** — Playwright-based browser tests covering user flows
+  - Auth flows (login, registration, session management)
+  - List CRUD operations
+  - Item CRUD operations
+  - Sharing flows
+  - Offline queue behavior
+  - Language switching
+  - Theme switching
+  - Navigation
+  - `run-e2e-tests.sh` convenience script for local execution
+  - CI integration via `frontend-e2e` job in test.yml
+- **Duplicate item name validation** — Items with duplicate names in the same list are now rejected (validated on both add and edit)
+- **Health check enhanced** — `/health` now probes database connectivity:
+  - Returns 200 with `{"status": "healthy", "database": "ok"}` when DB is reachable
+  - Returns 503 with `{"status": "degraded", "database": "unreachable"}` when DB is down
+- **Static files safety check** — Server checks if static directory exists before mounting (prevents crash in dev mode without built frontend)
 - **Offline queue** — Item mutations made while offline are queued in localStorage and auto-synced on reconnect
   - `useOfflineQueue` hook for managing pending changes
   - `ListDetail` and `SharedList` pages integrate queue + sync
@@ -18,6 +38,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **CI/CD workflows updated**:
+  - deploy.yml: Added smoke test step, updated to actions/checkout@v5
+  - test.yml: Added `frontend-e2e` job with Playwright, runs on PR to main/dev
+  - New smoke.yml: Scheduled smoke test every 15 minutes
 - **Simplified deployment**: single container app, root Dockerfile, ghcr.io, GitHub Actions CI/CD
 - Removed Express proxy server, separate frontend/backend Dockerfiles, ACR, Key Vault, 5 deployment hooks
 - Frontend now served by FastAPI StaticFiles (same-origin, no VITE_API_URL needed in production)
@@ -28,6 +52,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- pytest.ini now ignores `smoke_test.py` to prevent pytest from picking it up
+- Frontend-e2e CI job now runs on `dev` branch as well as `main`
+- Error message verification in E2E tests for invalid list IDs
 - Offline item updates no longer lost on page refresh or reconnect
 - Failed online API calls now enqueue changes for retry
 
