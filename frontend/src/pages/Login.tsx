@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { useTranslation } from 'react-i18next';
 import { useToastContext } from '../context/useToastContext';
+import ThemeToggle from '../components/ThemeToggle';
+import LanguageToggle from '../components/LanguageToggle';
 
 const Login: React.FC = () => {
   const { login, isAuthenticated, loading } = useAuth();
+  const { t } = useTranslation();
   const { showToast } = useToastContext();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
@@ -25,11 +29,19 @@ const Login: React.FC = () => {
       await login({ email, password });
       navigate('/');
     } catch (err: unknown) {
-      const errorMessage =
+      const errorDetail =
         err && typeof err === 'object' && 'response' in err
-          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail ||
-            'Login failed'
-          : 'Login failed. Please check your credentials.';
+          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+          : undefined;
+
+      let errorMessage: string;
+      if (errorDetail === 'Incorrect email or password') {
+        errorMessage = t('errors.incorrect_email_or_password');
+      } else if (errorDetail === 'Could not validate credentials') {
+        errorMessage = t('errors.could_not_validate_credentials');
+      } else {
+        errorMessage = t('errors.login_failed_network');
+      }
       showToast(errorMessage, 'error');
     } finally {
       setSubmitting(false);
@@ -38,24 +50,32 @@ const Login: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="page page-center">
-        <div className="loading">Loading...</div>
+      <div className="page page-center page-auth">
+        <div className="auth-toolbar">
+          <LanguageToggle />
+          <ThemeToggle />
+        </div>
+        <div className="loading">{t('common.loading')}</div>
       </div>
     );
   }
 
   return (
-    <div className="page page-center">
+    <div className="page page-center page-auth">
+      <div className="auth-toolbar">
+        <LanguageToggle />
+        <ThemeToggle />
+      </div>
       <div className="auth-container">
         <div className="auth-header">
-          <h1 className="auth-title">Welcome Back</h1>
-          <p className="auth-subtitle">Sign in to your account</p>
+          <h1 className="auth-title">{t('auth.welcome_back')}</h1>
+          <p className="auth-subtitle">{t('auth.sign_in_to_account')}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="auth-form">
           <div className="form-group">
             <label htmlFor="email" className="form-label">
-              Email
+              {t('auth.email')}
             </label>
             <input
               type="email"
@@ -63,7 +83,7 @@ const Login: React.FC = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="form-input"
-              placeholder="you@example.com"
+              placeholder={t('auth.email_placeholder')}
               required
               autoComplete="email"
             />
@@ -71,7 +91,7 @@ const Login: React.FC = () => {
 
           <div className="form-group">
             <label htmlFor="password" className="form-label">
-              Password
+              {t('auth.password')}
             </label>
             <input
               type="password"
@@ -79,7 +99,7 @@ const Login: React.FC = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="form-input"
-              placeholder="••••••••"
+              placeholder={t('auth.password_placeholder')}
               required
               autoComplete="current-password"
             />
@@ -90,14 +110,14 @@ const Login: React.FC = () => {
             className="btn btn-primary btn-full"
             disabled={submitting}
           >
-            {submitting ? 'Signing in...' : 'Sign In'}
+            {submitting ? t('auth.signing_in') : t('auth.sign_in')}
           </button>
         </form>
 
         <p className="auth-footer">
-          Don't have an account?{' '}
+          {t('auth.dont_have_account')}{' '}
           <Link to="/register" className="auth-link">
-            Register
+            {t('auth.register')}
           </Link>
         </p>
       </div>

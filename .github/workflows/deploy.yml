@@ -20,9 +20,12 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push' && github.event.pull_request.merged == true
     environment: production  # Requires approval for production
+    outputs:
+      web_url: ${{ steps.urls.outputs.web_url }}
+      api_url: ${{ steps.urls.outputs.api_url }}
     
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install azd
         uses: Azure/setup-azd@v1.0.0
@@ -44,15 +47,22 @@ jobs:
           # Key Vault name passed to Bicep (matches default in main.bicep)
           AZD_DEPLOY_PARAM_KEY_VAULT_NAME: ${{ vars.KEY_VAULT_NAME || 'shoppinglist-kv' }}
 
+      - name: Get deployment URLs
+        id: urls
+        working-directory: infra
+        run: |
+          echo "web_url=$(azd show --output json | jq -r '.services.web.endpoint')" >> $GITHUB_OUTPUT
+          echo "api_url=$(azd show --output json | jq -r '.services.api.endpoint')" >> $GITHUB_OUTPUT
+
       - name: Verify Deployment
         working-directory: infra
         run: |
           # Wait for deployment to stabilize
           sleep 30
           
-          # Get URLs
-          WEB_URL=$(azd show --output json | jq -r '.services.web.endpoint')
-          API_URL=$(azd show --output json | jq -r '.services.api.endpoint')
+          # Get URLs (from previous step's azd show)
+          WEB_URL="${{ steps.urls.outputs.web_url }}"
+          API_URL="${{ steps.urls.outputs.api_url }}"
           
           echo "Web: $WEB_URL"
           echo "API: $API_URL"
@@ -62,4 +72,91 @@ jobs:
           curl -f "$API_URL/health" || (echo "❌ API health check failed"; exit 1)
           
           echo "✅ Deployment verified!"
+
+  post-deploy-e2e:
+    needs: deploy
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    if: success()
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Log in to Azure (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Read e2e secrets from Key Vault
+        id: kv
+        run: |
+          VAULT_NAME="${{ vars.KEY_VAULT_NAME || 'shoppinglist-kv' }}"
+          echo "invite_code=$(az keyvault secret show --vault-name $VAULT_NAME --name registration-key --query value -o tsv)" >> $GITHUB_OUTPUT
+          echo "password=$(az keyvault secret show --vault-name $VAULT_NAME --name e2e-test-password --query value -o tsv)" >> $GITHUB_OUTPUT
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright (chromium only)
+        run: npx playwright install chromium
+
+      - name: Run e2e deployment smoke tests
+        run: npx playwright test --config=playwright.deploy.config.ts
+        env:
+          E2E_BASE_URL: ${{ needs.deploy.outputs.web_url }}
+          E2E_API_BASE_URL: ${{ needs.deploy.outputs.api_url }}/api
+          E2E_INVITE_CODE: ${{ steps.kv.outputs.invite_code }}
+          E2E_USER_EMAIL: deploy-e2e-test@example.com
+          E2E_USER_PASSWORD: ${{ steps.kv.outputs.password }}
+
+      - name: Cleanup test data
+        if: always()
+        run: |
+          # Login as test user via API
+          echo "Logging in as test user to cleanup..."
+          LOGIN_RESPONSE=$(curl -s "${{ needs.deploy.outputs.api_url }}/api/auth/login" \
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            -d "username=deploy-e2e-test@example.com&password=${{ steps.kv.outputs.password }}")
+          TOKEN=$(echo "$LOGIN_RESPONSE" | jq -r '.access_token')
+          
+          if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
+            echo "⚠️  Could not log in for cleanup (test user may not exist yet)"
+            echo "   Response: $LOGIN_RESPONSE"
+            exit 0
+          fi
+          
+          # Get all lists for the test user
+          LISTS=$(curl -s "${{ needs.deploy.outputs.api_url }}/api/lists" \
+            -H "Authorization: Bearer $TOKEN" \
+            | jq -r '.[].id')
+          
+          # Delete each list — validate UUID to prevent shell injection
+          for LIST_ID in $LISTS; do
+            if echo "$LIST_ID" | grep -qE '^[0-9a-fA-F-]{36}$'; then
+              echo "Deleting list: $LIST_ID"
+              curl -s -X DELETE "${{ needs.deploy.outputs.api_url }}/api/lists/$LIST_ID" \
+                -H "Authorization: Bearer $TOKEN"
+            else
+              echo "⚠️  Skipping invalid list ID: $LIST_ID"
+            fi
+          done
+          
+          echo "✅ Cleanup complete"
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-deploy-report
+          path: frontend/playwright-deploy-report/
+          retention-days: 7
 

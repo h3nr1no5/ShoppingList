@@ -1,5 +1,6 @@
 import type { Toast } from '../hooks/useToast';
 import { useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import './ToastContainer.css';
 
 interface ToastContainerProps {
@@ -12,6 +13,7 @@ function getToastIcon(type: 'success' | 'error' | 'warning'): string {
 }
 
 export function ToastContainer({ toasts, dismissToast }: ToastContainerProps) {
+  const { t } = useTranslation();
   const [exitingIds, setExitingIds] = useState<Set<number>>(new Set());
 
   const handleDismiss = useCallback((id: number) => {
@@ -34,7 +36,7 @@ export function ToastContainer({ toasts, dismissToast }: ToastContainerProps) {
   }
 
   return (
-    <div className="toast-container" aria-live="polite" aria-label="Notifications">
+    <div className="toast-container" aria-live="polite" aria-label={t('accessibility.notifications')}>
       {toasts.map((toast) => {
         const isExiting = exitingIds.has(toast.id);
 
@@ -53,7 +55,7 @@ export function ToastContainer({ toasts, dismissToast }: ToastContainerProps) {
             <button
               className="toast-close"
               onClick={() => handleDismiss(toast.id)}
-              aria-label="Dismiss notification"
+              aria-label={t('accessibility.dismiss_notification')}
             >
               ×
             </button>

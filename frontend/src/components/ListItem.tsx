@@ -1,10 +1,13 @@
 import React, { useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
+import i18n from '../i18n/i18n';
 import { type ListItem as ListItemType } from '../types';
+import type { TFunction } from 'i18next';
 import Swipeable from './Swipeable';
 import ConfirmDialog from './ConfirmDialog';
 
 /** Formats a date string as relative time (e.g., "5m ago", "2h ago", "Jan 4") */
-function formatRelativeTime(dateString: string): string {
+function formatRelativeTime(dateString: string, t: TFunction): string {
   const date = new Date(dateString);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
@@ -14,14 +17,14 @@ function formatRelativeTime(dateString: string): string {
   const diffDay = Math.floor(diffHour / 24);
   const diffWeek = Math.floor(diffDay / 7);
 
-  if (diffSec < 60) return 'Just now';
-  if (diffMin < 60) return `${diffMin}m ago`;
-  if (diffHour < 24) return `${diffHour}h ago`;
-  if (diffDay < 7) return `${diffDay}d ago`;
-  if (diffWeek < 4) return `${diffWeek}w ago`;
+  if (diffSec < 60) return t('item.just_now');
+  if (diffMin < 60) return t('item.minutes_ago', { minutes: diffMin });
+  if (diffHour < 24) return t('item.hours_ago', { hours: diffHour });
+  if (diffDay < 7) return t('item.days_ago', { days: diffDay });
+  if (diffWeek < 4) return t('item.weeks_ago', { weeks: diffWeek });
 
   // Older: show short date like "Jan 4"
-  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  return date.toLocaleDateString(i18n.language, { month: 'short', day: 'numeric' });
 }
 
 /**
@@ -44,6 +47,7 @@ interface ListItemProps {
 }
 
 const ListItem: React.FC<ListItemProps> = ({ item, onToggle, onDelete, onEdit }) => {
+  const { t } = useTranslation();
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(item.name);
   const [editQuantity, setEditQuantity] = useState(item.quantity);
@@ -124,7 +128,7 @@ const ListItem: React.FC<ListItemProps> = ({ item, onToggle, onDelete, onEdit })
           {/* Last updated timestamp - shown as footer note */}
           {(item.updated_at || item.created_at) && (
             <div className="item-timestamp">
-              {formatRelativeTime(item.updated_at || item.created_at)}
+              {formatRelativeTime(item.updated_at || item.created_at, t)}
             </div>
           )}
         </div>
@@ -146,7 +150,7 @@ const ListItem: React.FC<ListItemProps> = ({ item, onToggle, onDelete, onEdit })
             onChange={(e) => setEditName(e.target.value)}
             className="edit-input"
             autoFocus
-            aria-label="Item name"
+            aria-label={t('item.item_name_aria')}
           />
           <input
             type="text"
@@ -164,7 +168,7 @@ const ListItem: React.FC<ListItemProps> = ({ item, onToggle, onDelete, onEdit })
               setQuantityInputValue(String(clamped));
             }}
             className="edit-quantity-input"
-            aria-label="Quantity"
+            aria-label={t('item.quantity_aria')}
             aria-valuemin={1}
             aria-valuemax={9999}
             aria-valuenow={editQuantity}
@@ -172,8 +176,8 @@ const ListItem: React.FC<ListItemProps> = ({ item, onToggle, onDelete, onEdit })
           <button
             type="submit"
             className="btn-icon btn-save-item"
-            title="Save changes"
-            aria-label="Save changes"
+            title={t('item.save_changes')}
+            aria-label={t('item.save_changes')}
           >
             ✓
           </button>
@@ -181,8 +185,8 @@ const ListItem: React.FC<ListItemProps> = ({ item, onToggle, onDelete, onEdit })
             type="button"
             onClick={handleCancel}
             className="btn-icon btn-cancel-item"
-            title="Cancel editing"
-            aria-label="Cancel editing"
+            title={t('item.cancel_editing')}
+            aria-label={t('item.cancel_editing')}
           >
             ✕
           </button>
@@ -192,14 +196,14 @@ const ListItem: React.FC<ListItemProps> = ({ item, onToggle, onDelete, onEdit })
           <button
             onClick={handleEdit}
             className="btn-icon btn-edit-item"
-            title="Edit item"
+            title={t('item.edit_item')}
           >
             ✏️
           </button>
           <button
             onClick={handleDelete}
             className="btn-icon btn-delete-item"
-            title="Delete item"
+            title={t('item.delete_item')}
           >
             🗑️
           </button>
@@ -219,10 +223,10 @@ const ListItem: React.FC<ListItemProps> = ({ item, onToggle, onDelete, onEdit })
       )}
       <ConfirmDialog
         isOpen={showDeleteConfirm}
-        title="Delete Item"
-        message={`Are you sure you want to delete "${item.name}"? This action cannot be undone.`}
-        confirmText="Delete"
-        cancelText="Cancel"
+        title={t('item.delete_item_title')}
+        message={t('item.delete_item_confirm', { itemName: item.name })}
+        confirmText={t('common.delete')}
+        cancelText={t('common.cancel')}
         onConfirm={confirmDelete}
         onCancel={cancelDelete}
       />

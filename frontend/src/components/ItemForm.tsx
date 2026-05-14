@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface ItemFormProps {
   onSubmit: (name: string, quantity: number) => void;
@@ -13,6 +14,7 @@ const clampQuantity = (value: string): number => {
 };
 
 const ItemForm: React.FC<ItemFormProps> = ({ onSubmit, onCancel }) => {
+  const { t } = useTranslation();
   const [name, setName] = useState('');
   const [quantityInput, setQuantityInput] = useState("1");
 
@@ -34,7 +36,7 @@ const ItemForm: React.FC<ItemFormProps> = ({ onSubmit, onCancel }) => {
           value={name}
           onChange={(e) => setName(e.target.value)}
           className="form-input"
-          placeholder="Add new item..."
+          placeholder={t('item.add_new_item')}
           autoFocus
         />
         <input
@@ -46,10 +48,10 @@ const ItemForm: React.FC<ItemFormProps> = ({ onSubmit, onCancel }) => {
           onChange={(e) => setQuantityInput(e.target.value)}
           onBlur={() => { if (!quantityInput || parseInt(quantityInput, 10) < 1) setQuantityInput("1"); }}
           className="form-input quantity-input"
-          aria-label="Quantity"
+          aria-label={t('item.quantity_aria')}
         />
         <button type="submit" className="btn btn-primary">
-          Add
+          {t('item.add')}
         </button>
         {onCancel && (
           <button
@@ -57,7 +59,7 @@ const ItemForm: React.FC<ItemFormProps> = ({ onSubmit, onCancel }) => {
             onClick={onCancel}
             className="btn btn-secondary"
           >
-            Cancel
+            {t('common.cancel')}
           </button>
         )}
       </div>

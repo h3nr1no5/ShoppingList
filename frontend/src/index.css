@@ -451,8 +451,8 @@ body {
   gap: var(--spacing-md);
   padding: var(--spacing-md);
   background-color: var(--bg-primary);
-  border-radius: var(--radius-md);
   border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
   transition: background-color var(--transition-fast);
 }
 
@@ -1130,8 +1130,10 @@ body {
 /* Swipeable (for touch delete) */
 .swipeable-wrapper {
   position: relative;
+}
+
+.swipeable-wrapper.swiping-active {
   overflow: hidden;
-  border-radius: var(--radius-lg);
 }
 
 .shopping-list-card.swipeable-card {
@@ -1261,6 +1263,17 @@ body {
     opacity: 1;
   }
 
+  /* Hide edit/delete buttons on mobile — swipe gestures handle both actions */
+  .btn-delete-item,
+  .btn-edit-item {
+    display: none;
+  }
+
+  .list-item {
+    padding: var(--spacing-sm);
+    gap: var(--spacing-sm);
+  }
+
   .auth-container {
     padding: clamp(16px, 4vw, 32px);
     margin: var(--spacing-md);
@@ -1372,5 +1385,40 @@ body {
     transform: scale(1);
     opacity: 1;
   }
+}
+
+/* Auth page layout (for positioning the toolbar) */
+.page-auth {
+  position: relative;
+}
+
+/* Auth page toolbar - fixed position in top-right */
+.auth-toolbar {
+  position: absolute;
+  top: var(--spacing-md);
+  right: var(--spacing-lg);
+  display: flex;
+  gap: var(--spacing-sm);
+  align-items: center;
+  z-index: 10;
+}
+
+/* Language toggle button - ensure readable in both themes */
+.lang-toggle {
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  min-width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  transition: background-color var(--transition-fast);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: var(--spacing-xs);
+}
+
+.lang-toggle:hover {
+  background-color: var(--bg-tertiary);
 }
 

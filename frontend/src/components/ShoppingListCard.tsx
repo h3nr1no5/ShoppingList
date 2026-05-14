@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { type ShoppingList } from '../types';
 import Swipeable from './Swipeable';
 import ConfirmDialog from './ConfirmDialog';
@@ -11,6 +12,7 @@ interface ShoppingListCardProps {
 }
 
 const ShoppingListCard: React.FC<ShoppingListCardProps> = ({ list, onDelete, disabled = false }) => {
+  const { t } = useTranslation();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const itemCount = list.items?.length || 0;
   const checkedCount = list.items?.filter((item) => item.is_checked).length || 0;
@@ -36,7 +38,7 @@ const ShoppingListCard: React.FC<ShoppingListCardProps> = ({ list, onDelete, dis
         <h3 className="card-title">{list.name}</h3>
         <div className="card-meta">
           <span className="item-count">
-            {checkedCount}/{itemCount} items
+            {t('list.items_count', { checkedCount, itemCount })}
           </span>
         </div>
       </div>
@@ -47,7 +49,7 @@ const ShoppingListCard: React.FC<ShoppingListCardProps> = ({ list, onDelete, dis
             handleDelete();
           }}
           className="btn-delete"
-          title="Delete list"
+          title={t('list.delete_list_title')}
         >
           ×
         </button>
@@ -66,10 +68,10 @@ const ShoppingListCard: React.FC<ShoppingListCardProps> = ({ list, onDelete, dis
       </Swipeable>
       <ConfirmDialog
         isOpen={showDeleteConfirm}
-        title="Delete List"
-        message={`Are you sure you want to delete "${list.name}"? All items in this list will be lost.`}
-        confirmText="Delete"
-        cancelText="Cancel"
+        title={t('list.delete_list_title')}
+        message={t('list.delete_list_confirm', { listName: list.name })}
+        confirmText={t('common.delete')}
+        cancelText={t('common.cancel')}
         onConfirm={confirmDelete}
         onCancel={cancelDelete}
       />

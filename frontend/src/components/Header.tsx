@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
-import { useTheme } from '../hooks/useTheme';
 import { useApiHealthContext } from '../context/useApiHealthContext';
+import ThemeToggle from './ThemeToggle';
+import LanguageToggle from './LanguageToggle';
 
 const Header: React.FC = () => {
+  const { t } = useTranslation();
   const { user, isAuthenticated, logout } = useAuth();
-  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -56,14 +58,14 @@ const Header: React.FC = () => {
         <div className="header-left">
           <Link to="/" className="logo" onClick={closeMenu}>
             <span className="logo-icon">🛒</span>
-            <span className="logo-text">Shopping List</span>
+            <span className="logo-text">{t('nav.shopping_list')}</span>
           </Link>
 
           {/* Status dot - always visible in header, including mobile */}
           {status !== 'checking' && (
             <div
               className="connection-status"
-              title={status === 'connected' ? 'API Connected' : 'API Disconnected'}
+              title={status === 'connected' ? t('nav.api_connected') : t('nav.api_disconnected')}
               role="status"
               aria-live="polite"
             >
@@ -74,28 +76,22 @@ const Header: React.FC = () => {
 
         {/* Desktop nav — hidden on mobile via CSS */}
         <nav className="nav">
-          <button
-            onClick={toggleTheme}
-            className="btn btn-icon theme-toggle"
-            aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
-            title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
-          >
-            {theme === 'light' ? '🌙' : '☀️'}
-          </button>
+          <LanguageToggle />
+          <ThemeToggle />
           {isAuthenticated ? (
             <div className="user-menu">
               <span className="user-email">{user?.email}</span>
               <button onClick={handleLogout} className="btn btn-secondary">
-                Logout
+                {t('nav.logout')}
               </button>
             </div>
           ) : (
             <div className="auth-links">
               <Link to="/login" className="btn btn-secondary">
-                Login
+                {t('nav.login')}
               </Link>
               <Link to="/register" className="btn btn-primary">
-                Register
+                {t('nav.register')}
               </Link>
             </div>
           )}
@@ -106,7 +102,7 @@ const Header: React.FC = () => {
           className="hamburger-btn"
           onClick={toggleMenu}
           aria-expanded={menuOpen}
-          aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+          aria-label={menuOpen ? t('nav.close_menu') : t('nav.open_menu')}
           aria-controls="mobile-nav"
         >
           <span className="hamburger-icon" aria-hidden="true"></span>
@@ -127,41 +123,37 @@ const Header: React.FC = () => {
         ref={menuRef}
         role="dialog"
         aria-modal="true"
-        aria-label="Navigation menu"
+        aria-label={t('nav.navigation_menu')}
       >
         <div className="nav-mobile-header">
-          <span className="nav-mobile-title">Menu</span>
+          <span className="nav-mobile-title">{t('nav.menu')}</span>
           <button
             className="nav-mobile-close"
             onClick={closeMenu}
-            aria-label="Close menu"
+            aria-label={t('nav.close_menu')}
           >
             ×
           </button>
         </div>
         <div className="nav-mobile-items">
-          <button
-            onClick={() => {
-              toggleTheme();
-            }}
-            className="btn btn-secondary"
-          >
-            {theme === 'light' ? '🌙 Dark Mode' : '☀️ Light Mode'}
-          </button>
+          <div className="mobile-toggle-row">
+            <LanguageToggle />
+            <ThemeToggle />
+          </div>
           {isAuthenticated ? (
             <div className="user-menu">
               <span className="user-email">{user?.email}</span>
               <button onClick={handleLogout} className="btn btn-secondary">
-                Logout
+                {t('nav.logout')}
               </button>
             </div>
           ) : (
             <div className="auth-links">
               <Link to="/login" className="btn btn-secondary" onClick={closeMenu}>
-                Login
+                {t('nav.login')}
               </Link>
               <Link to="/register" className="btn btn-primary" onClick={closeMenu}>
-                Register
+                {t('nav.register')}
               </Link>
             </div>
           )}

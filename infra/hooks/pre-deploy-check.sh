@@ -1,7 +1,8 @@
 #!/bin/bash
 # pre-deploy-check.sh
 # Pre-deployment URL verification
-# Runs BEFORE azd deploy to prevent wrong URL deployments
+# Runs AFTER set-env.sh (which syncs .env → Key Vault).
+# Runs BEFORE azd deploy to prevent wrong URL deployments.
 
 set -e
 

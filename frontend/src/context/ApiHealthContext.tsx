@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { useApiHealth, type ApiHealthStatus } from '../hooks/useApiHealth';
 import { useToastContext } from './useToastContext';
 
@@ -11,14 +12,15 @@ const ApiHealthContext = React.createContext<ApiHealthContextValue | undefined>(
 export { ApiHealthContext };
 
 export function ApiHealthProvider({ children }: { children: React.ReactNode }) {
+  const { t } = useTranslation();
   const { showToast, dismissAll } = useToastContext();
 
   const { status } = useApiHealth({
     onDisconnect: () => {
-      showToast('Connection lost. Please check your internet.', 'error');
+      showToast(t('toasts.connection_lost'), 'error');
     },
     onReconnect: () => {
-      showToast('Back online!', 'success');
+      showToast(t('toasts.back_online'), 'success');
       dismissAll();
     },
   });

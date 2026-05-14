@@ -1,5 +1,5 @@
 ---
-description: Test specialist that writes unit/integration tests and verifies functionality.
+description: Test specialist that writes unit/integration tests (backend pytest + frontend vitest) and verifies functionality.
 mode: subagent
 model: opencode/minimax-m2.5-free
 temperature: 0.25
@@ -30,5 +30,7 @@ After writing/running tests, clearly state:
 - Pass/fail status
 - Any failing tests with reasons
 - Recommendations for fixes
+
+For end-to-end / Playwright browser tests, delegate to @subagents/e2e.
 
 Stay focused on testing — do not implement production code unless the task explicitly requires it.

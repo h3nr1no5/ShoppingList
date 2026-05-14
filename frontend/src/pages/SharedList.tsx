@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { type ShoppingList, type ListItem as ListItemType } from '../types';
+import { useTranslation } from 'react-i18next';
+import { useToastContext } from '../context/useToastContext';
 import { useApiHealthContext } from '../context/useApiHealthContext';
 import apiClient, { apiClientNoRedirect } from '../api/client';
 import { useOfflineQueue } from '../hooks/useOfflineQueue';
@@ -17,6 +19,8 @@ const SharedList: React.FC = () => {
   const initialFetchDone = useRef(false);
   const prevConnectedRef = useRef(isConnected);
   const syncAttemptedRef = useRef(false);
+  const { t } = useTranslation();
+  const { showToast } = useToastContext();
 
   const { enqueue, getPending, dequeue } = useOfflineQueue(shareCode ?? '');
 
@@ -27,11 +31,11 @@ const SharedList: React.FC = () => {
       setList(response.data);
     } catch (err) {
       console.error('Failed to fetch shared list:', err);
-      setError('List not found or is not public');
+      setError(t('errors.list_not_found_or_public'));
     } finally {
       setLoadingList(false);
     }
-  }, [shareCode]);
+  }, [shareCode, t]);
 
   const syncPendingChanges = useCallback(async (): Promise<void> => {
     const pending = getPending();
@@ -103,6 +107,7 @@ const SharedList: React.FC = () => {
         if (httpStatus === 401) {
           // Auth token expired — notify user and stop
           console.error('Authentication failed during sync:', err);
+          showToast(t('errors.session_expired'), 'error');
           return;
         }
 
@@ -114,7 +119,7 @@ const SharedList: React.FC = () => {
 
     // After all changes synced, re-fetch to reconcile state
     await fetchSharedList();
-  }, [shareCode, getPending, dequeue, list, fetchSharedList]);
+  }, [shareCode, getPending, dequeue, list, fetchSharedList, showToast, t]);
 
   useEffect(() => {
     if (shareCode && !initialFetchDone.current) {
@@ -143,6 +148,15 @@ const SharedList: React.FC = () => {
 
   const handleAddItem = async (name: string, quantity: number): Promise<void> => {
     if (!list) return;
+
+    // Check for duplicate name (case-insensitive)
+    const duplicate = (list.items ?? []).some(
+      item => item.name.trim().toLowerCase() === name.trim().toLowerCase()
+    );
+    if (duplicate) {
+      showToast(t('errors.item_name_exists'), 'error');
+      return;
+    }
 
     // Local-only temporary ID
     const tempId = `temp-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
@@ -269,6 +283,15 @@ const handleDeleteItem = async (itemId: string): Promise<void> => {
 const handleEditItem = async (itemId: string, name: string, quantity: number): Promise<void> => {
     if (!list) return;
 
+    // Check for duplicate name (case-insensitive), excluding current item
+    const duplicate = (list.items ?? []).some(
+      item => item.id !== itemId && item.name.trim().toLowerCase() === name.trim().toLowerCase()
+    );
+    if (duplicate) {
+      showToast(t('errors.item_name_exists'), 'error');
+      return;
+    }
+
     // Optimistically update UI using functional state
     setList(prev => {
       if (!prev) return prev;
@@ -306,7 +329,7 @@ const handleEditItem = async (itemId: string, name: string, quantity: number): P
       <div className="page">
         <Header />
         <div className="loading-container">
-          <div className="loading">Loading shared list...</div>
+          <div className="loading">{t('list.loading_list')}</div>
         </div>
       </div>
     );
@@ -317,7 +340,7 @@ const handleEditItem = async (itemId: string, name: string, quantity: number): P
       <div className="page">
         <Header />
         <div className="loading-container">
-          <div className="error-message">{error || 'List not found'}</div>
+          <div className="error-message">{error || t('errors.list_not_found')}</div>
         </div>
       </div>
     );
@@ -332,12 +355,12 @@ const handleEditItem = async (itemId: string, name: string, quantity: number): P
       <main className="main">
         <div className="page-header">
           <h1 className="page-title">{list.name}</h1>
-          <span className="badge badge-shared">Shared List</span>
+          <span className="badge badge-shared">{t('list.shared_list_badge')}</span>
         </div>
 
         <div className="list-progress">
           <span>
-            {checkedCount} of {totalCount} items checked
+            {t('list.checked_progress', { checkedCount, totalCount })}
           </span>
           {totalCount > 0 && (
             <div className="progress-bar">
@@ -354,8 +377,8 @@ const handleEditItem = async (itemId: string, name: string, quantity: number): P
 
           {(list.items ?? []).length === 0 ? (
             <div className="empty-state">
-              <p>No items in this list.</p>
-              <p>Add your first item above!</p>
+              <p>{t('item.no_items')}</p>
+              <p>{t('item.add_first_item')}</p>
             </div>
           ) : (
             (list.items ?? [])
