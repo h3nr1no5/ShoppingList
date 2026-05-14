@@ -92,7 +92,7 @@ jobs:
           echo "Bicep templates compiled successfully"
 
   frontend-e2e:
-    if: github.base_ref == 'main'
+    if: github.base_ref == 'main' || github.base_ref == 'dev'
     runs-on: ubuntu-latest
     defaults:
       run:
