@@ -18,9 +18,10 @@ A full-stack shopping list application with sharing capabilities. Built with Fas
 ```
 ShoppingList/
 ├── AGENTS.md              # Agent instructions & command reference
-├── DEPLOYMENT.md          # Azure deployment guide
+├── DEPLOYMENT.md         # Azure deployment guide
 ├── README.md              # Project overview (this file)
 ├── azure.yaml             # Azure Developer CLI configuration
+├── Dockerfile             # Root multi-stage build (Node builds frontend → Python runtime)
 ├── backend/               # FastAPI backend (Python)
 │   ├── main.py            # App entry point & all API routes
 │   ├── models.py          # SQLAlchemy ORM models (User, ShoppingList, ListItem)
@@ -30,7 +31,6 @@ ShoppingList/
 │   ├── database.py        # Async SQLAlchemy engine & session setup
 │   ├── requirements.txt   # Python dependencies
 │   ├── docker-compose.yml # Local PostgreSQL via Docker
-│   ├── Dockerfile         # Backend container image
 │   ├── run.sh             # Start script (creates venv, starts Postgres, runs uvicorn)
 │   ├── stop.sh            # Stop script
 │   └── tests/             # Test suite
@@ -60,8 +60,6 @@ ShoppingList/
 │   │   └── types/         # TypeScript type definitions
 │   ├── package.json       # Node dependencies
 │   ├── vite.config.ts     # Vite config (proxies /api to backend)
-│   ├── server.js          # Express production server
-│   ├── Dockerfile         # Frontend container image
 │   └── run.sh             # Start script (installs deps, runs Vite)
 └── infra/                 # Azure infrastructure (Bicep)
     ├── main.bicep         # Infrastructure definition
@@ -170,7 +168,7 @@ cd frontend && bash run.sh         # installs deps, starts Vite dev server on :5
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `VITE_API_URL` | No | Backend API URL (optional, Vite proxies by default) |
+| `VITE_API_URL` | No | API is same-origin (`/api`). Only set for development overrides against a different backend. |
 
 ## Testing
 
@@ -188,18 +186,16 @@ Fixtures in `conftest.py` provide authenticated clients, test data, and automati
 
 ## Azure Deployment
 
-Deployed via Azure Developer CLI (`azd`) to Azure Container Apps.
+Deployed via GitHub Actions to Azure Container Apps. Push to `main` triggers the workflow which builds the image, pushes to ghcr.io, updates the container app, and runs smoke tests.
 
+**Initial provisioning:**
 ```bash
-cd infra && azd up          # provision + deploy
-cd infra && azd provision   # provision only
-cd infra && azd deploy      # deploy only
+az login
+azd init
+azd provision
 ```
 
-**Production URLs:**
-
-- Frontend: `https://shoppinglist-web.victorioushill-2f5d1c85.northeurope.azurecontainerapps.io/`
-- API: `https://shoppinglist-api.victorioushill-2f5d1c85.northeurope.azurecontainerapps.io/`
+**Production URL:** `https://shoppinglist-web.victorioushill-2f5d1c85.northeurope.azurecontainerapps.io/`
 
 See `DEPLOYMENT.md` for full deployment guide.
 
@@ -209,4 +205,4 @@ See `DEPLOYMENT.md` for full deployment guide.
 - **Share codes as UUIDs** — Passed as query param `?share_code=...` or path param
 - **Flexible access model** — Owner, share code holder, public list, or anonymous list
 - **Async throughout** — Async SQLAlchemy, asyncpg, async FastAPI
-- **Vite proxy for dev** — Frontend dev server proxies `/api` → `http://localhost:8000`
+- **Same-origin** — FastAPI serves both API and frontend (no separate API URL needed in production)

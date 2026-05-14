@@ -7,6 +7,12 @@
     },
     "postgresAdminPassword": {
       "value": ""
+    },
+    "secretKey": {
+      "value": ""
+    },
+    "registrationKey": {
+      "value": ""
     }
   }
 }

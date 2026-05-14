@@ -20,6 +20,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 from fastapi import FastAPI, Depends, HTTPException, status, Query
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import text
@@ -582,6 +583,14 @@ async def debug_db_endpoint(db: AsyncSession = Depends(get_db)):
 async def health_check():
     """Health check endpoint."""
     return {"status": "healthy"}
+
+
+# ==================== Static File Serving ====================
+
+# Mount static files AFTER all API routes so /api/* and /health take priority
+STATIC_DIR = os.getenv("STATIC_DIR", "static")
+static_app = StaticFiles(directory=STATIC_DIR, html=True)
+app.mount("/", static_app, name="static")
 
 
 # ==================== App Startup ====================

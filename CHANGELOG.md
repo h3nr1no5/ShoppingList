@@ -18,6 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Simplified deployment**: single container app, root Dockerfile, ghcr.io, GitHub Actions CI/CD
+- Removed Express proxy server, separate frontend/backend Dockerfiles, ACR, Key Vault, 5 deployment hooks
+- Frontend now served by FastAPI StaticFiles (same-origin, no VITE_API_URL needed in production)
+
 ### Deprecated
 
 ### Removed

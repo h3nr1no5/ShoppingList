@@ -19,7 +19,7 @@ dist/
 build/
 .hisory/
 .opencode/
-frontend/
+
 infra/
 tests/
 test_*.py

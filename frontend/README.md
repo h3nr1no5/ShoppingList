@@ -92,16 +92,11 @@ Output is in the `dist/` directory.
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `VITE_API_URL` | API endpoint URL | `/api` (dev) |
-| `PORT` | Server port | `8080` |
+| `VITE_API_URL` | API endpoint URL (optional, defaults to `/api` same-origin) | `/api` |
 
 ## Production Deployment
 
-The production build uses a custom Express server (`server.js`) with Helmet for security. This provides:
-
-- **Content Security Policy (CSP)** — Configured to allow connections to the API endpoint
-- **Static file serving** — Serves the built React app from `dist/`
-- **Production-ready headers** — Helmet sets security headers
+The production build is served by FastAPI via StaticFiles mount at `/`. No separate server needed.
 
 ### Building
 
@@ -109,41 +104,18 @@ The production build uses a custom Express server (`server.js`) with Helmet for 
 npm run build
 ```
 
-### Running Production Server
-
-```bash
-node server.js
-```
-
-The server runs on port `8080` by default (configurable via `PORT` environment variable).
+Output is in the `dist/` directory, which is copied to the Python container during the Docker build.
 
 ### Docker
 
-A multi-stage Dockerfile builds the frontend and runs the production server:
-
-```dockerfile
-# Build stage
-FROM node:18-alpine AS build
-RUN npm install && npm run build
-
-# Production stage
-FROM node:18-alpine
-COPY --from=build /app/dist /app/dist
-COPY server.js package.json ./
-RUN npm install --production
-EXPOSE 8080
-CMD ["node", "server.js"]
-```
+Built as part of the root multi-stage Dockerfile. The frontend is built in the Node stage, output copied to `/app/static` in the Python runtime stage. See the root `Dockerfile`.
 
 ## Azure Deployment
 
-The frontend is deployed as an Azure Container App:
+Deployed as part of a single container app alongside the FastAPI backend. Push to `main` triggers GitHub Actions → builds root Dockerfile → deploys to Azure.
 
 - **URL:** `https://shoppinglist-web.victorioushill-2f5d1c85.northeurope.azurecontainerapps.io/`
-- **Uses:** Multi-stage Dockerfile (build + production)
-- **Command:** `azd deploy --service web` to deploy
-
-The production server (`server.js`) handles CSP headers to allow the frontend to communicate with the API at `https://shoppinglist-api.victorioushill-2f5d1c85.northeurope.azurecontainerapps.io/`.
+- **Architecture:** Single container serves both API (`/api/*`) and frontend (`/`) from same origin
 
 ## Troubleshooting
 

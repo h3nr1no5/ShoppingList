@@ -1,5 +1,6 @@
-// Azure infrastructure for Shopping List App
-// Deploys: Azure Container Apps, PostgreSQL Flexible Server
+// Azure infrastructure for Shopping List App (simplified)
+// Single container app, PostgreSQL Flexible Server
+// Images from ghcr.io, secrets via env vars
 
 @description('Environment name')
 param envName string = 'shoppinglist'
@@ -14,44 +15,26 @@ param postgresAdminLogin string
 @secure()
 param postgresAdminPassword string
 
-@description('JWT secret key for API')
+@description('Container image URL (e.g., ghcr.io/owner/repo:sha)')
+param image string = 'nginx:latest'
+
+@description('Container registry server (e.g., ghcr.io)')
+param registryServer string = ''
+
+@description('Container registry username')
+param registryUsername string = ''
+
+@description('Container registry password')
+@secure()
+param registryPassword string = ''
+
+@description('SECRET_KEY for JWT signing')
 @secure()
 param secretKey string
 
-@description('Registration invite code')
+@description('REGISTRATION_KEY for invite-only registration')
 @secure()
 param registrationKey string
-
-@description('API container image')
-param apiImage string = 'nginx:latest'
-
-@description('Web container image')
-param webImage string = 'nginx:latest'
-
-@description('Azure Container Registry name')
-param containerRegistryName string = '${envName}acr'
-
-@description('Azure Container Registry SKU')
-param containerRegistrySku string = 'Basic'
-
-@description('Azure Key Vault name')
-param keyVaultName string = 'shoppinglist-kv'
-
-resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' existing = {
-  name: keyVaultName
-}
-
-// Container Registry
-resource containerRegistry 'Microsoft.ContainerRegistry/registries@2021-09-01' = {
-  name: containerRegistryName
-  location: location
-  sku: {
-    name: containerRegistrySku
-  }
-  properties: {
-    adminUserEnabled: true
-  }
-}
 
 // Container Apps Environment
 resource containerAppsEnv 'Microsoft.App/managedEnvironments@2022-03-01' = {
@@ -60,15 +43,15 @@ resource containerAppsEnv 'Microsoft.App/managedEnvironments@2022-03-01' = {
   properties: {}
 }
 
-// API Container App
-resource apiContainerApp 'Microsoft.App/containerApps@2022-03-01' = {
-  name: '${envName}-api'
+// Single Container App
+resource app 'Microsoft.App/containerApps@2023-05-01' = {
+  name: '${envName}-app'
   location: location
   identity: {
     type: 'SystemAssigned'
   }
   tags: {
-    'azd-service-name': 'api'
+    'azd-service-name': 'app'
   }
   properties: {
     managedEnvironmentId: containerAppsEnv.id
@@ -78,165 +61,58 @@ resource apiContainerApp 'Microsoft.App/containerApps@2022-03-01' = {
         targetPort: 8000
         transport: 'auto'
       }
-      registries: [
+      registries: !empty(registryPassword) ? [
         {
-          server: containerRegistry.properties.loginServer
-          username: containerRegistry.name
-          passwordSecretRef: 'acr-password'
+          server: registryServer
+          username: registryUsername
+          passwordSecretRef: 'registry-password'
         }
-      ]
-      secrets: [
+      ] : []
+      secrets: !empty(registryPassword) ? [
         {
-          name: 'secret-key'
-          value: keyVault.getSecret('secret-key')
+          name: 'registry-password'
+          value: registryPassword
         }
-        {
-          name: 'registration-key'
-          value: keyVault.getSecret('registration-key')
-        }
-      ]
-      env: [
-        {
-          name: 'ALLOWED_ORIGINS'
-          value: 'https://${webContainerApp.properties.configuration.ingress.fqdn}'
-        }
-        {
-          name: 'SECRET_KEY'
-          secretRef: 'secret-key'
-        }
-        {
-          name: 'REGISTRATION_KEY'
-          secretRef: 'registration-key'
-        }
-        {
-          name: 'DATABASE_URL'
-          value: 'postgresql+asyncpg://${postgresAdminLogin}:${postgresAdminPassword}@${postgresServer.properties.fullyQualifiedDomainName}:5432/shoppinglist?sslmode=require'
-        }
-      ]
+      ] : []
     }
     template: {
       containers: [
         {
-          name: '${envName}-api'
-          image: apiImage
+          name: '${envName}-app'
+          image: image
           resources: {
-            cpu: json('0.25')
-            memory: '0.5Gi'
+            cpu: json('0.5')
+            memory: '1.0Gi'
           }
-        }
-      ]
-      secrets: [
-        {
-          name: 'acr-password'
-          value: containerRegistry.listCredentials().passwords[0].value
+          env: [
+            {
+              name: 'SECRET_KEY'
+              value: secretKey
+            }
+            {
+              name: 'REGISTRATION_KEY'
+              value: registrationKey
+            }
+            {
+              name: 'DATABASE_URL'
+              value: 'postgresql+asyncpg://${postgresAdminLogin}:${postgresAdminPassword}@${postgresServer.properties.fullyQualifiedDomainName}:5432/shoppinglist?sslmode=require'
+            }
+            {
+              name: 'STATIC_DIR'
+              value: 'static'
+            }
+          ]
         }
       ]
       scale: {
         minReplicas: 0
-        maxReplicas: 10
-        rules: [
-          {
-            name: 'http-scaling'
-            http: {
-              metadata: {
-                concurrentRequests: '10'
-              }
-            }
-          }
-          {
-            name: 'cpu-scaling'
-            custom: {
-              type: 'cpu'
-              metadata: {
-                type: 'Utilization'
-                value: '70'
-              }
-            }
-          }
-          {
-            name: 'memory-scaling'
-            custom: {
-              type: 'memory'
-              metadata: {
-                type: 'Utilization'
-                value: '70'
-              }
-            }
-          }
-        ]
+        maxReplicas: 1
       }
     }
   }
 }
 
-// Web Container App
-resource webContainerApp 'Microsoft.App/containerApps@2022-03-01' = {
-  name: '${envName}-web'
-  location: location
-  identity: {
-    type: 'SystemAssigned'
-  }
-  tags: {
-    'azd-service-name': 'web'
-  }
-  properties: {
-    managedEnvironmentId: containerAppsEnv.id
-    configuration: {
-      ingress: {
-        external: true
-        targetPort: 8080
-        transport: 'auto'
-      }
-      registries: [
-        {
-          server: containerRegistry.properties.loginServer
-          username: containerRegistry.name
-          passwordSecretRef: 'acr-password'
-        }
-      ]
-      env: [
-        {
-          name: 'VITE_API_URL'
-          value: 'https://${apiContainerApp.properties.configuration.ingress.fqdn}'
-        }
-      ]
-    }
-    template: {
-      containers: [
-        {
-          name: '${envName}-web'
-          image: webImage
-          resources: {
-            cpu: json('0.25')
-            memory: '0.5Gi'
-          }
-        }
-      ]
-      secrets: [
-        {
-          name: 'acr-password'
-          value: containerRegistry.listCredentials().passwords[0].value
-        }
-      ]
-      scale: {
-        minReplicas: 1
-        maxReplicas: 10
-        rules: [
-          {
-            name: 'http-scaling'
-            http: {
-              metadata: {
-                concurrentRequests: '10'
-              }
-            }
-          }
-        ]
-      }
-    }
-  }
-}
-
-// PostgreSQL Flexible Server (reuse existing if already created)
+// PostgreSQL Flexible Server
 resource postgresServer 'Microsoft.DBforPostgreSQL/flexibleServers@2023-03-01-preview' = {
   name: '${envName}-postgres'
   location: location
@@ -255,23 +131,21 @@ resource postgresServer 'Microsoft.DBforPostgreSQL/flexibleServers@2023-03-01-pr
       mode: 'Disabled'
     }
     backup: {
-      backupRetentionDays: 1
+      backupRetentionDays: 7
       geoRedundantBackup: 'Disabled'
     }
   }
   resource db 'databases' = {
     name: 'shoppinglist'
     properties: {
-      charset: 'utf8'
-      collation: 'en_US.utf8'
+      charset: 'UTF8'
+      collation: 'en_US.UTF8'
     }
   }
 }
 
-// Output values
-output API_APP_URL string = apiContainerApp.properties.configuration.ingress.fqdn
-output WEB_APP_URL string = webContainerApp.properties.configuration.ingress.fqdn
+// Outputs
+output APP_URL string = app.properties.configuration.ingress.fqdn
 output DATABASE_HOST string = postgresServer.properties.fullyQualifiedDomainName
 output DATABASE_NAME string = 'shoppinglist'
 output DATABASE_USER string = postgresAdminLogin
-output AZURE_CONTAINER_REGISTRY_ENDPOINT string = containerRegistry.properties.loginServer
