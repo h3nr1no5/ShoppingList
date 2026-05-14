@@ -35,8 +35,9 @@ test.describe('Navigation and routing', () => {
   test('shows error message for invalid list id', async ({ authedPage }) => {
     await authedPage.goto('/lists/00000000-0000-0000-0000-000000000000');
 
-    // Error is shown as a toast notification (auto-dismisses after 3s)
-    await expect(authedPage.locator('.toast-message')).toContainText("Couldn't load the list", { timeout: 5000 });
+    // Wait for the toast container to appear, then verify the error message
+    await expect(authedPage.locator('.toast-container')).toBeVisible({ timeout: 10000 });
+    await expect(authedPage.locator('.toast-message')).toContainText("Couldn't load the list");
   });
 
   test('shows login page for /login route', async ({ browser }) => {

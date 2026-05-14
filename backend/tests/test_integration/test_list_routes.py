@@ -12,7 +12,7 @@ class TestHealthCheck:
         """Health check should return healthy status."""
         response = await client.get("/health")
         assert response.status_code == 200
-        assert response.json() == {"status": "healthy"}
+        assert response.json() == {"status": "healthy", "database": "ok"}
 
 
 class TestGetLists:

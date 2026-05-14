@@ -14,6 +14,9 @@ void i18n
       hu: { translation: huTranslation },
     },
     fallbackLng: 'en',
+    react: {
+      useSuspense: false,
+    },
     detection: {
       order: ['localStorage', 'navigator', 'htmlTag'],
       caches: ['localStorage'],

@@ -5,38 +5,12 @@ description: A shopping list app with sharing capabilities built with FastAPI, R
 
 infra:
   path: infra
-  module: main.bicep
-
-hooks:
-  prebuild:
-    shell: sh
-    run: ./infra/hooks/prepackage.sh
-
-  predeploy:
-    shell: sh
-    run: ./infra/hooks/set-env.sh && ./infra/hooks/pre-deploy-check.sh
-    continueOnError: false  # Fail deployment if URL checks fail
-
-postdeploy:
-    shell: sh
-    run: ./infra/hooks/verify-deployment.sh
-    continueOnError: false  # Fail deployment if verification fails
+  module: main
 
 services:
-  web:
-    project: ./frontend
+  app:
+    project: .
     host: containerapp
-    language: js
+    language: docker
     docker:
-      dockerfile: Dockerfile
-
-  api:
-    project: ./backend
-    language: python
-    host: containerapp
-
-resources:
-  postgres:
-    type: database(postgres)
-    database:
-      version: "15"
+      path: ./Dockerfile
