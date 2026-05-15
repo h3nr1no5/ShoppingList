@@ -3,6 +3,11 @@ name: Deploy to Azure
 on:
   push:
     branches: [main]
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+      - 'Dockerfile'
+      - '.github/workflows/deploy.yml'
   workflow_dispatch:
 
 permissions:
@@ -11,10 +16,11 @@ permissions:
   packages: write
 
 env:
-  AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-  AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-  AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
   AZURE_ENV_NAME: ${{ vars.AZURE_ENV_NAME || 'shoppinglistprod' }}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   deploy:
@@ -32,12 +38,14 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-       - name: Build and push Docker image
-         uses: docker/build-push-action@v6
-         with:
-           context: .
-           push: true
-           tags: ghcr.io/${{ github.repository | tolower }}:${{ github.sha }}
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ghcr.io/${{ github.repository | tolower }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Log in to Azure (OIDC)
         uses: azure/login@v2
@@ -48,12 +56,9 @@ jobs:
 
       - name: Get resource group and container app name
         run: |
-          RG=$(az group list --query "[?contains(name, '${{ env.AZURE_ENV_NAME }}')].name" -o tsv | head -1)
+          RG=$(az group list --query "[?name=='${{ env.AZURE_ENV_NAME }}'].name" -o tsv)
           if [ -z "$RG" ]; then
-            RG=$(az group list --query '[0].name' -o tsv 2>/dev/null || echo "")
-          fi
-          if [ -z "$RG" ]; then
-            echo "ERROR: Could not determine resource group"
+            echo "ERROR: Resource group '${{ env.AZURE_ENV_NAME }}' not found"
             exit 1
           fi
           echo "RESOURCE_GROUP=$RG" >> $GITHUB_ENV
@@ -72,7 +77,7 @@ jobs:
           az containerapp update \
             --name "${{ env.CONTAINER_APP_NAME }}" \
             --resource-group "${{ env.RESOURCE_GROUP }}" \
-            --image ghcr.io/${{ github.repository }}:${{ github.sha }} \
+            --image ghcr.io/${{ github.repository | tolower }}:${{ github.sha }} \
             --set-env-vars "SECRET_KEY=${{ secrets.SECRET_KEY }}" "REGISTRATION_KEY=${{ secrets.REGISTRATION_KEY }}" \
             --registry-server ghcr.io \
             --registry-username ${{ github.actor }} \
@@ -93,15 +98,59 @@ jobs:
             exit 1
           fi
 
+      - name: Store current revision for rollback
+        id: prev-revision
+        run: |
+          PREV=$(az containerapp show \
+            --name "${{ env.CONTAINER_APP_NAME }}" \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --query "properties.latestRevisionName" -o tsv)
+          echo "previous=$PREV" >> $GITHUB_OUTPUT
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.10"
 
-      - name: Run smoke tests
+      - name: Wait for app to be healthy
+        run: |
+          MAX_ATTEMPTS=30
+          ATTEMPT=0
+          while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ env.APP_URL }}/health")
+            if [ "$STATUS" = "200" ]; then
+              echo "App is healthy"
+              exit 0
+            fi
+            ATTEMPT=$((ATTEMPT + 1))
+            echo "Attempt $ATTEMPT/$MAX_ATTEMPTS: Health check returned $STATUS, waiting..."
+            sleep 10
+          done
+          echo "ERROR: App did not become healthy within $((MAX_ATTEMPTS * 10)) seconds"
+          exit 1
+
+      - name: Run smoke tests with retries
         env:
           SMOKE_BASE_URL: "${{ env.APP_URL }}"
           SMOKE_REGISTRATION_KEY: "${{ secrets.REGISTRATION_KEY }}"
         run: |
-          sleep 30
-          python backend/smoke_test.py
+          for i in 1 2 3; do
+            if python backend/smoke_test.py; then
+              echo "Smoke tests passed"
+              exit 0
+            fi
+            echo "Smoke test attempt $i failed, retrying in 5s..."
+            sleep 5
+          done
+          echo "Smoke tests failed after 3 attempts"
+          exit 1
+
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          echo "Deployment failed, rolling back to previous revision..."
+          az containerapp revision restore \
+            --name "${{ env.CONTAINER_APP_NAME }}" \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --revision "${{ steps.prev-revision.outputs.previous }}"
+          echo "Rollback complete"
