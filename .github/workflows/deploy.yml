@@ -38,12 +38,15 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Set lowercase repository name
+        run: echo "REPOSITORY_LOWER=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
+
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
-          tags: ghcr.io/${{ tolower(github.repository) }}:${{ github.sha }}
+          tags: ghcr.io/${{ env.REPOSITORY_LOWER }}:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -77,7 +80,7 @@ jobs:
           az containerapp update \
             --name "${{ env.CONTAINER_APP_NAME }}" \
             --resource-group "${{ env.RESOURCE_GROUP }}" \
-            --image ghcr.io/${{ tolower(github.repository) }}:${{ github.sha }} \
+            --image ghcr.io/${{ env.REPOSITORY_LOWER }}:${{ github.sha }} \
             --set-env-vars "SECRET_KEY=${{ secrets.SECRET_KEY }}" "REGISTRATION_KEY=${{ secrets.REGISTRATION_KEY }}" \
             --registry-server ghcr.io \
             --registry-username ${{ github.actor }} \
