@@ -11,16 +11,19 @@ A full-stack shopping list application with sharing capabilities. Built with Fas
 | **Database** | PostgreSQL (async via asyncpg) |
 | **Auth** | JWT (python-jose), bcrypt (passlib) |
 | **Infra** | Azure Container Apps, Azure Database for PostgreSQL, Bicep |
-| **CI/Testing** | pytest, pytest-asyncio, httpx, ESLint |
+| **CI/Testing** | pytest, pytest-asyncio, httpx, Playwright, ESLint |
+| **i18n** | i18next (English, Hungarian) |
 
 ## Project Structure
 
 ```
 ShoppingList/
 ├── AGENTS.md              # Agent instructions & command reference
-├── DEPLOYMENT.md          # Azure deployment guide
+├── DEPLOYMENT.md         # Azure deployment guide
 ├── README.md              # Project overview (this file)
 ├── azure.yaml             # Azure Developer CLI configuration
+├── Dockerfile             # Root multi-stage build (Node builds frontend → Python runtime)
+├── run-e2e-tests.sh       # E2E test runner script
 ├── backend/               # FastAPI backend (Python)
 │   ├── main.py            # App entry point & all API routes
 │   ├── models.py          # SQLAlchemy ORM models (User, ShoppingList, ListItem)
@@ -30,9 +33,9 @@ ShoppingList/
 │   ├── database.py        # Async SQLAlchemy engine & session setup
 │   ├── requirements.txt   # Python dependencies
 │   ├── docker-compose.yml # Local PostgreSQL via Docker
-│   ├── Dockerfile         # Backend container image
 │   ├── run.sh             # Start script (creates venv, starts Postgres, runs uvicorn)
 │   ├── stop.sh            # Stop script
+│   ├── smoke_test.py      # Post-deployment smoke tests
 │   └── tests/             # Test suite
 │       ├── conftest.py    # Fixtures (authenticated clients, test data, clean DB)
 │       ├── test_unit/     # Unit tests
@@ -57,11 +60,11 @@ ShoppingList/
 │   │   │   └── ShareModal.tsx     # Share code modal
 │   │   ├── context/       # React contexts (Auth, Theme)
 │   │   ├── api/           # API client utilities
-│   │   └── types/         # TypeScript type definitions
+│   │   ├── types/         # TypeScript type definitions
+│   │   └── i18n/          # Internationalization (en, hu translations)
+│   ├── e2e/               # Playwright E2E tests
 │   ├── package.json       # Node dependencies
 │   ├── vite.config.ts     # Vite config (proxies /api to backend)
-│   ├── server.js          # Express production server
-│   ├── Dockerfile         # Frontend container image
 │   └── run.sh             # Start script (installs deps, runs Vite)
 └── infra/                 # Azure infrastructure (Bicep)
     ├── main.bicep         # Infrastructure definition
@@ -76,6 +79,8 @@ ShoppingList/
 - **Sharing** — Generate UUID-based share codes to share lists with others
 - **Access Control** — Owner, share code, public list, or anonymous list (no owner)
 - **Dark Mode** — Theme switching via React context
+- **Theme Toggle** — Switch between dark and light modes
+- **Internationalization** — English and Hungarian language support with language switcher
 - **Responsive UI** — Mobile-friendly interface
 
 ## API Overview
@@ -170,36 +175,43 @@ cd frontend && bash run.sh         # installs deps, starts Vite dev server on :5
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `VITE_API_URL` | No | Backend API URL (optional, Vite proxies by default) |
+| `VITE_API_URL` | No | API is same-origin (`/api`). Only set for development overrides against a different backend. |
 
 ## Testing
 
 Tests require PostgreSQL — conftest.py uses PostgreSQL (not SQLite). Start PostgreSQL via `cd backend && docker compose up -d` before running tests.
 
 ```bash
+# Backend tests (pytest)
 cd backend && pytest                         # all tests
 cd backend && pytest tests/test_unit/        # unit tests only
 cd backend && pytest -m integration          # integration tests only
 cd backend && pytest -m security             # security tests only
 cd backend && pytest -v -k "test_name"         # single test
+
+# E2E tests (requires PostgreSQL via Docker)
+bash run-e2e-tests.sh                          # run all E2E tests
+bash run-e2e-tests.sh --project=chromium       # single browser
+bash run-e2e-tests.sh e2e/lists.spec.ts        # single test file
+
+# Smoke tests (post-deployment verification)
+python backend/smoke_test.py <BASE_URL> <REGISTRATION_KEY>
 ```
 
 Fixtures in `conftest.py` provide authenticated clients, test data, and automatic DB cleanup.
 
 ## Azure Deployment
 
-Deployed via Azure Developer CLI (`azd`) to Azure Container Apps.
+Deployed via GitHub Actions to Azure Container Apps. Push to `main` triggers the workflow which builds the image, pushes to ghcr.io, updates the container app, and runs smoke tests.
 
+**Initial provisioning:**
 ```bash
-cd infra && azd up          # provision + deploy
-cd infra && azd provision   # provision only
-cd infra && azd deploy      # deploy only
+az login
+azd init
+azd provision
 ```
 
-**Production URLs:**
-
-- Frontend: `https://shoppinglist-web.victorioushill-2f5d1c85.northeurope.azurecontainerapps.io/`
-- API: `https://shoppinglist-api.victorioushill-2f5d1c85.northeurope.azurecontainerapps.io/`
+**Production URL:** `https://shoppinglist-web.victorioushill-2f5d1c85.northeurope.azurecontainerapps.io/`
 
 See `DEPLOYMENT.md` for full deployment guide.
 
@@ -209,4 +221,4 @@ See `DEPLOYMENT.md` for full deployment guide.
 - **Share codes as UUIDs** — Passed as query param `?share_code=...` or path param
 - **Flexible access model** — Owner, share code holder, public list, or anonymous list
 - **Async throughout** — Async SQLAlchemy, asyncpg, async FastAPI
-- **Vite proxy for dev** — Frontend dev server proxies `/api` → `http://localhost:8000`
+- **Same-origin** — FastAPI serves both API and frontend (no separate API URL needed in production)

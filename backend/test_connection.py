@@ -2,6 +2,8 @@
 Test connection to Azure PostgreSQL using raw asyncpg.
 """
 import asyncio
+import os
+
 import asyncpg
 
 
@@ -12,7 +14,7 @@ async def test_connection():
             host="shoppinglist-postgres.postgres.database.azure.com",
             port=5432,
             user="postgresadmin",
-            password="I.gmH.,xCJNWi1s`",
+            password=os.getenv("AZURE_POSTGRESQL_PASSWORD", "<your-password>"),  # Set env var or replace with actual password
             database="shoppinglist",
             ssl="require",
             timeout=30,

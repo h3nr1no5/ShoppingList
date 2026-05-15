@@ -30,7 +30,8 @@ The frontend runs on **http://localhost:5173**
 
 | Command | Description |
 |---------|-------------|
-| `npm run test` | Run Vitest test suite |
+| `npm run test` | Run Vitest test suite (watch mode) |
+| `npm run test:run` | Run Vitest test suite once (CI mode) |
 | `npm run dev` | Start Vite development server |
 | `npm run build` | Typecheck and build for production |
 | `npm run lint` | Run ESLint |
@@ -51,6 +52,24 @@ For local development, you don't need to set `VITE_API_URL` — the proxy handle
 - **Share Codes** — Share lists with others using unique codes
 - **Offline Queue** — Changes to items made while offline are queued in localStorage and automatically synced when the connection is restored
 - **Public Lists** — Make lists publicly accessible
+- **Internationalization** — English and Hungarian language support with language switcher
+- **Theme Toggle** — Switch between dark/light modes
+
+### E2E Tests
+
+Playwright E2E tests are located in the `e2e/` directory. Run them with:
+
+```bash
+cd frontend && npx playwright test
+```
+
+Or use the convenience script from the project root:
+
+```bash
+bash run-e2e-tests.sh
+```
+
+This script starts PostgreSQL, installs dependencies, and runs the E2E tests.
 
 ## Tech Stack
 
@@ -59,6 +78,7 @@ For local development, you don't need to set `VITE_API_URL` — the proxy handle
 - Vite
 - React Router
 - Axios (HTTP client)
+- i18next (internationalization)
 - Vitest + Testing Library (testing)
 
 ## Project Structure
@@ -68,14 +88,16 @@ frontend/
 ├── public/             # Static assets
 ├── src/
 │   ├── api/           # API client (axios)
-│   ├── components/    # React components
+│   ├── components/    # React components (LanguageToggle, ThemeToggle, etc.)
 │   ├── context/       # React contexts (Auth, Theme, Toast, ApiHealth)
 │   ├── hooks/         # Custom hooks (useAuth, useTheme, useOfflineQueue, etc.)
+│   ├── i18n/          # Internationalization (translations)
 │   ├── pages/         # Page components
 │   ├── test/          # Test setup
 │   ├── types/         # TypeScript interfaces
 │   ├── App.tsx        # Main app component
 │   └── main.tsx       # Entry point
+├── e2e/               # Playwright E2E tests
 ├── index.html         # HTML template
 └── vite.config.ts     # Vite configuration
 ```
@@ -92,16 +114,11 @@ Output is in the `dist/` directory.
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `VITE_API_URL` | API endpoint URL | `/api` (dev) |
-| `PORT` | Server port | `8080` |
+| `VITE_API_URL` | API endpoint URL (optional, defaults to `/api` same-origin) | `/api` |
 
 ## Production Deployment
 
-The production build uses a custom Express server (`server.js`) with Helmet for security. This provides:
-
-- **Content Security Policy (CSP)** — Configured to allow connections to the API endpoint
-- **Static file serving** — Serves the built React app from `dist/`
-- **Production-ready headers** — Helmet sets security headers
+The production build is served by FastAPI via StaticFiles mount at `/`. No separate server needed.
 
 ### Building
 
@@ -109,41 +126,18 @@ The production build uses a custom Express server (`server.js`) with Helmet for 
 npm run build
 ```
 
-### Running Production Server
-
-```bash
-node server.js
-```
-
-The server runs on port `8080` by default (configurable via `PORT` environment variable).
+Output is in the `dist/` directory, which is copied to the Python container during the Docker build.
 
 ### Docker
 
-A multi-stage Dockerfile builds the frontend and runs the production server:
-
-```dockerfile
-# Build stage
-FROM node:18-alpine AS build
-RUN npm install && npm run build
-
-# Production stage
-FROM node:18-alpine
-COPY --from=build /app/dist /app/dist
-COPY server.js package.json ./
-RUN npm install --production
-EXPOSE 8080
-CMD ["node", "server.js"]
-```
+Built as part of the root multi-stage Dockerfile. The frontend is built in the Node stage, output copied to `/app/static` in the Python runtime stage. See the root `Dockerfile`.
 
 ## Azure Deployment
 
-The frontend is deployed as an Azure Container App:
+Deployed as part of a single container app alongside the FastAPI backend. Push to `main` triggers GitHub Actions → builds root Dockerfile → deploys to Azure.
 
 - **URL:** `https://shoppinglist-web.victorioushill-2f5d1c85.northeurope.azurecontainerapps.io/`
-- **Uses:** Multi-stage Dockerfile (build + production)
-- **Command:** `azd deploy --service web` to deploy
-
-The production server (`server.js`) handles CSP headers to allow the frontend to communicate with the API at `https://shoppinglist-api.victorioushill-2f5d1c85.northeurope.azurecontainerapps.io/`.
+- **Architecture:** Single container serves both API (`/api/*`) and frontend (`/`) from same origin
 
 ## Troubleshooting
 
@@ -154,6 +148,9 @@ The production server (`server.js`) handles CSP headers to allow the frontend to
 ### API Not Connecting
 - Verify the backend is running (`cd backend && ./run.sh`)
 - Check that port 8000 is not in use
+
+### Duplicate Item Names
+- Adding or editing items with duplicate names within the same list is not allowed and will be rejected by the server.
 
 ## Offline Queue
 

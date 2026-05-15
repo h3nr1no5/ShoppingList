@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.42.1.51946",
-      "templateHash": "4326775330260066898"
+      "templateHash": "15978998592919654661"
     }
   },
   "parameters": {
@@ -35,32 +35,44 @@
         "description": "Azure PostgreSQL administrator password"
       }
     },
-    "apiImage": {
+    "image": {
       "type": "string",
       "defaultValue": "nginx:latest",
       "metadata": {
-        "description": "API container image"
+        "description": "Container image URL (e.g., ghcr.io/owner/repo:sha)"
       }
     },
-    "webImage": {
+    "registryServer": {
       "type": "string",
-      "defaultValue": "nginx:latest",
+      "defaultValue": "",
       "metadata": {
-        "description": "Web container image"
+        "description": "Container registry server (e.g., ghcr.io)"
       }
     },
-    "containerRegistryName": {
+    "registryUsername": {
       "type": "string",
-      "defaultValue": "[format('{0}acr', parameters('envName'))]",
+      "defaultValue": "",
       "metadata": {
-        "description": "Azure Container Registry name"
+        "description": "Container registry username"
       }
     },
-    "containerRegistrySku": {
-      "type": "string",
-      "defaultValue": "Basic",
+    "registryPassword": {
+      "type": "securestring",
+      "defaultValue": "",
       "metadata": {
-        "description": "Azure Container Registry SKU"
+        "description": "Container registry password"
+      }
+    },
+    "secretKey": {
+      "type": "securestring",
+      "metadata": {
+        "description": "SECRET_KEY for JWT signing"
+      }
+    },
+    "registrationKey": {
+      "type": "securestring",
+      "metadata": {
+        "description": "REGISTRATION_KEY for invite-only registration"
       }
     }
   },
@@ -70,24 +82,12 @@
       "apiVersion": "2023-03-01-preview",
       "name": "[format('{0}/{1}', format('{0}-postgres', parameters('envName')), 'shoppinglist')]",
       "properties": {
-        "charset": "utf8",
-        "collation": "en_US.utf8"
+        "charset": "UTF8",
+        "collation": "en_US.UTF8"
       },
       "dependsOn": [
         "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', format('{0}-postgres', parameters('envName')))]"
       ]
-    },
-    {
-      "type": "Microsoft.ContainerRegistry/registries",
-      "apiVersion": "2021-09-01",
-      "name": "[parameters('containerRegistryName')]",
-      "location": "[parameters('location')]",
-      "sku": {
-        "name": "[parameters('containerRegistrySku')]"
-      },
-      "properties": {
-        "adminUserEnabled": true
-      }
     },
     {
       "type": "Microsoft.App/managedEnvironments",
@@ -98,14 +98,14 @@
     },
     {
       "type": "Microsoft.App/containerApps",
-      "apiVersion": "2022-03-01",
-      "name": "[format('{0}-api', parameters('envName'))]",
+      "apiVersion": "2023-05-01",
+      "name": "[format('{0}-app', parameters('envName'))]",
       "location": "[parameters('location')]",
       "identity": {
         "type": "SystemAssigned"
       },
       "tags": {
-        "azd-service-name": "api"
+        "azd-service-name": "app"
       },
       "properties": {
         "managedEnvironmentId": "[resourceId('Microsoft.App/managedEnvironments', format('{0}-env', parameters('envName')))]",
@@ -115,87 +115,68 @@
             "targetPort": 8000,
             "transport": "auto"
           },
-          "registries": [
-            {
-              "server": "[reference(resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName')), '2021-09-01').loginServer]",
-              "username": "[parameters('containerRegistryName')]",
-              "passwordSecretRef": "acr-password"
-            }
-          ]
+          "registries": "[if(not(empty(parameters('registryPassword'))), createArray(createObject('server', parameters('registryServer'), 'username', parameters('registryUsername'), 'passwordSecretRef', 'registry-password')), createArray())]",
+          "secrets": "[if(not(empty(parameters('registryPassword'))), createArray(createObject('name', 'registry-password', 'value', parameters('registryPassword'))), createArray())]"
         },
         "template": {
           "containers": [
             {
-              "name": "[format('{0}-api', parameters('envName'))]",
-              "image": "[parameters('apiImage')]",
+              "name": "[format('{0}-app', parameters('envName'))]",
+              "image": "[parameters('image')]",
               "resources": {
                 "cpu": "[json('0.5')]",
-                "memory": "1Gi"
-              }
+                "memory": "1.0Gi"
+              },
+              "env": [
+                {
+                  "name": "SECRET_KEY",
+                  "value": "[parameters('secretKey')]"
+                },
+                {
+                  "name": "REGISTRATION_KEY",
+                  "value": "[parameters('registrationKey')]"
+                },
+                {
+                  "name": "DATABASE_URL",
+                  "value": "[format('postgresql+asyncpg://{0}:{1}@{2}:5432/shoppinglist?sslmode=require', parameters('postgresAdminLogin'), parameters('postgresAdminPassword'), reference(resourceId('Microsoft.DBforPostgreSQL/flexibleServers', format('{0}-postgres', parameters('envName'))), '2023-03-01-preview').fullyQualifiedDomainName)]"
+                },
+                {
+                  "name": "STATIC_DIR",
+                  "value": "static"
+                }
+              ],
+              "probes": [
+                {
+                  "type": "Liveness",
+                  "httpGet": {
+                    "path": "/health",
+                    "port": 8000
+                  },
+                  "initialDelaySeconds": 30,
+                  "periodSeconds": 30,
+                  "failureThreshold": 3
+                },
+                {
+                  "type": "Readiness",
+                  "httpGet": {
+                    "path": "/health",
+                    "port": 8000
+                  },
+                  "periodSeconds": 10,
+                  "failureThreshold": 3
+                }
+              ]
             }
           ],
-          "secrets": [
-            {
-              "name": "acr-password",
-              "value": "[listCredentials(resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName')), '2021-09-01').passwords[0].value]"
-            }
-          ]
+          "scale": {
+            "minReplicas": 0,
+            "maxReplicas": 1
+          }
         }
       },
       "dependsOn": [
         "[resourceId('Microsoft.App/managedEnvironments', format('{0}-env', parameters('envName')))]",
-        "[resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName'))]"
-      ]
-    },
-    {
-      "type": "Microsoft.App/containerApps",
-      "apiVersion": "2022-03-01",
-      "name": "[format('{0}-web', parameters('envName'))]",
-      "location": "[parameters('location')]",
-      "identity": {
-        "type": "SystemAssigned"
-      },
-      "tags": {
-        "azd-service-name": "web"
-      },
-      "properties": {
-        "managedEnvironmentId": "[resourceId('Microsoft.App/managedEnvironments', format('{0}-env', parameters('envName')))]",
-        "configuration": {
-          "ingress": {
-            "external": true,
-            "targetPort": 8080,
-            "transport": "auto"
-          },
-          "registries": [
-            {
-              "server": "[reference(resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName')), '2021-09-01').loginServer]",
-              "username": "[parameters('containerRegistryName')]",
-              "passwordSecretRef": "acr-password"
-            }
-          ]
-        },
-        "template": {
-          "containers": [
-            {
-              "name": "[format('{0}-web', parameters('envName'))]",
-              "image": "[parameters('webImage')]",
-              "resources": {
-                "cpu": "[json('0.5')]",
-                "memory": "1Gi"
-              }
-            }
-          ],
-          "secrets": [
-            {
-              "name": "acr-password",
-              "value": "[listCredentials(resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName')), '2021-09-01').passwords[0].value]"
-            }
-          ]
-        }
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.App/managedEnvironments', format('{0}-env', parameters('envName')))]",
-        "[resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName'))]"
+        "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', format('{0}-postgres', parameters('envName')))]"
       ]
     },
     {
@@ -222,16 +203,21 @@
           "geoRedundantBackup": "Disabled"
         }
       }
+    },
+    {
+      "type": "Microsoft.DBforPostgreSQL/flexibleServers/firewallRules",
+      "apiVersion": "2023-03-01-preview",
+      "name": "[format('{0}-postgres/AllowAzureServices', parameters('envName'))]",
+      "properties": {
+        "startIpAddress": "0.0.0.0",
+        "endIpAddress": "0.0.0.0"
+      }
     }
   ],
   "outputs": {
-    "API_APP_URL": {
+    "APP_URL": {
       "type": "string",
-      "value": "[reference(resourceId('Microsoft.App/containerApps', format('{0}-api', parameters('envName'))), '2022-03-01').configuration.ingress.fqdn]"
-    },
-    "WEB_APP_URL": {
-      "type": "string",
-      "value": "[reference(resourceId('Microsoft.App/containerApps', format('{0}-web', parameters('envName'))), '2022-03-01').configuration.ingress.fqdn]"
+      "value": "[reference(resourceId('Microsoft.App/containerApps', format('{0}-app', parameters('envName'))), '2023-05-01').configuration.ingress.fqdn]"
     },
     "DATABASE_HOST": {
       "type": "string",
@@ -243,11 +229,10 @@
     },
     "DATABASE_USER": {
       "type": "string",
+      "metadata": {
+        "description": "Database admin username — treat as sensitive"
+      },
       "value": "[parameters('postgresAdminLogin')]"
-    },
-    "AZURE_CONTAINER_REGISTRY_ENDPOINT": {
-      "type": "string",
-      "value": "[reference(resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName')), '2021-09-01').loginServer]"
     }
   }
 }

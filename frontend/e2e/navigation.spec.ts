@@ -35,8 +35,10 @@ test.describe('Navigation and routing', () => {
   test('shows error message for invalid list id', async ({ authedPage }) => {
     await authedPage.goto('/lists/00000000-0000-0000-0000-000000000000');
 
-    // Error is shown as a toast notification (auto-dismisses after 3s)
-    await expect(authedPage.locator('.toast-message')).toContainText("Couldn't load the list", { timeout: 5000 });
+    // Wait for the toast error message to appear.
+    // Note: Avoid toBeVisible() on .toast-container — it uses getBoundingClientRect
+    // which can return zero dimensions on WebKit headless Linux for position:fixed elements.
+    await expect(authedPage.locator('.toast-message')).toContainText("Couldn't load the list", { timeout: 7000 });
   });
 
   test('shows login page for /login route', async ({ browser }) => {

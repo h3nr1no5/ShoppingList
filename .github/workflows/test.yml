@@ -72,37 +72,12 @@ jobs:
       - name: Run tests
         run: npm run test:run
         env:
-          VITE_API_URL: ""  # Tests use vitest.config.ts setting, but explicitly set here for clarity
+          VITE_API_URL: ""
 
-  frontend-build:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: frontend
-    steps:
-      - uses: actions/checkout@v5
+      - name: Build frontend
+        run: npm run build
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v5
-        with:
-          node-version: "20"
-          cache: "npm"
-          cache-dependency-path: frontend/package-lock.json
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build frontend (verify VITE_API_URL handling)
-        run: |
-          # Create a .env file with a test API URL to verify build works
-          echo "VITE_API_URL=https://test-api.example.com" > .env
-          npm run build
-        env:
-          # VITE_API_URL is read from .env file by Vite during build
-          VITE_API_URL: https://test-api.example.com
-
-  deploy-check:
-    if: github.base_ref == 'main'
+  validate-bicep:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -114,27 +89,10 @@ jobs:
       - name: Validate Bicep templates
         run: |
           az bicep build --file infra/main.bicep
-          echo "✅ Bicep templates compiled successfully"
-
-      - name: Build backend Docker image (validation only)
-        run: |
-          docker build -t backend-test ./backend
-          echo "✅ Backend Docker image built successfully"
-
-      - name: Create .env for frontend build
-        run: |
-          echo "VITE_API_URL=https://test.example.com" > frontend/.env
-
-      - name: Build frontend Docker image (validation only)
-        run: |
-          docker build -t frontend-test ./frontend
-          echo "✅ Frontend Docker image built successfully"
-
-      - name: Cleanup .env
-        run: rm -f frontend/.env
+          echo "Bicep templates compiled successfully"
 
   frontend-e2e:
-    if: github.base_ref == 'main'
+    if: github.base_ref == 'main' || github.base_ref == 'dev'
     runs-on: ubuntu-latest
     defaults:
       run:
