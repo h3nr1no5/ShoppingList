@@ -90,6 +90,15 @@ jobs:
             --username ${{ github.actor }} \
             --password ${{ secrets.GHCR_PAT }}
 
+      - name: Store previous revision for rollback
+        id: prev-revision
+        run: |
+          PREV=$(az containerapp show \
+            --name "${{ env.CONTAINER_APP_NAME }}" \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --query "properties.latestRevisionName" -o tsv)
+          echo "previous=$PREV" >> "$GITHUB_OUTPUT"
+
       - name: Deploy to Container Apps
         run: |
           az containerapp update \
@@ -112,15 +121,6 @@ jobs:
             echo "ERROR: APP_URL is not set — 'Get deployment URL' step likely failed"
             exit 1
           fi
-
-      - name: Store current revision for rollback
-        id: prev-revision
-        run: |
-          PREV=$(az containerapp show \
-            --name "${{ env.CONTAINER_APP_NAME }}" \
-            --resource-group "${{ env.RESOURCE_GROUP }}" \
-            --query "properties.latestRevisionName" -o tsv)
-          echo "previous=$PREV" >> "$GITHUB_OUTPUT"
 
       - name: Setup Python
         uses: actions/setup-python@v5
