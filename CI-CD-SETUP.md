@@ -64,7 +64,7 @@ Ensure `GHCR_PAT` has `read:packages` scope and is set correctly.
 ### Container App keeps crashing
 Check logs:
 ```bash
-az containerapp logs show --name shoppinglistprod-app --resource-group rg-shoppinglistprod --tail 100
+az containerapp logs show --name shoppinglist-app --resource-group rg-ShoppingListProd --tail 100
 ```
 
 ### Workflow fails on OIDC

@@ -47,18 +47,15 @@ jobs:
             exit 1
           fi
 
-          APP_NAME=$(az containerapp list \
-            --resource-group "$RG" \
-            --query '[0].name' -o tsv 2>/dev/null || echo "")
-          if [ -z "$APP_NAME" ]; then
-            echo "ERROR: No container app found in resource group $RG"
-            exit 1
-          fi
-
+          APP_NAME="shoppinglist-app"
           APP_URL=$(az containerapp show \
             --name "$APP_NAME" \
             --resource-group "$RG" \
             --query properties.configuration.ingress.fqdn -o tsv)
+          if [ -z "$APP_URL" ]; then
+            echo "ERROR: Container app '$APP_NAME' not found in resource group $RG"
+            exit 1
+          fi
           echo "APP_URL=https://$APP_URL" >> $GITHUB_ENV
 
       - name: Verify deployment URL is set

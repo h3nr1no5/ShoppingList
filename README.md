@@ -211,7 +211,7 @@ azd init
 azd provision
 ```
 
-**Production URL:** `https://shoppinglist-web.victorioushill-2f5d1c85.northeurope.azurecontainerapps.io/`
+**Production URL:** `https://shoppinglist-app.victorioushill-2f5d1c85.northeurope.azurecontainerapps.io/`
 
 See `DEPLOYMENT.md` for full deployment guide.
 

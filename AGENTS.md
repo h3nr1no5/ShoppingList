@@ -73,7 +73,7 @@ azd provision
 
 **Automatic deploy:** Push to `main` → GitHub Actions deploys automatically.
 
-**Production URL:** `https://shoppinglist-web.victorioushill-2f5d1c85.northeurope.azurecontainerapps.io/`
+**Production URL:** `https://shoppinglist-app.victorioushill-2f5d1c85.northeurope.azurecontainerapps.io/`
 
 **Secrets (GitHub → Actions → Secrets):**
 - `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID` — OIDC auth
