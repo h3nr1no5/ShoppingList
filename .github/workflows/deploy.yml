@@ -39,7 +39,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set lowercase repository name
-        run: echo "REPOSITORY_LOWER=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
+        run: echo "REPOSITORY_LOWER=${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
@@ -64,7 +64,7 @@ jobs:
             echo "ERROR: Resource group '${{ env.AZURE_ENV_NAME }}' not found"
             exit 1
           fi
-          echo "RESOURCE_GROUP=$RG" >> $GITHUB_ENV
+          echo "RESOURCE_GROUP=$RG" >> "$GITHUB_ENV"
 
           APP_NAME=$(az containerapp list \
             --resource-group "$RG" \
@@ -73,7 +73,7 @@ jobs:
             echo "ERROR: No container app found in resource group $RG"
             exit 1
           fi
-          echo "CONTAINER_APP_NAME=$APP_NAME" >> $GITHUB_ENV
+          echo "CONTAINER_APP_NAME=$APP_NAME" >> "$GITHUB_ENV"
 
       - name: Deploy to Container Apps
         run: |
@@ -92,7 +92,7 @@ jobs:
             --name "${{ env.CONTAINER_APP_NAME }}" \
             --resource-group "${{ env.RESOURCE_GROUP }}" \
             --query properties.configuration.ingress.fqdn -o tsv)
-          echo "APP_URL=https://$APP_URL" >> $GITHUB_ENV
+          echo "APP_URL=https://$APP_URL" >> "$GITHUB_ENV"
 
       - name: Verify deployment URL is set
         run: |
@@ -108,7 +108,7 @@ jobs:
             --name "${{ env.CONTAINER_APP_NAME }}" \
             --resource-group "${{ env.RESOURCE_GROUP }}" \
             --query "properties.latestRevisionName" -o tsv)
-          echo "previous=$PREV" >> $GITHUB_OUTPUT
+          echo "previous=$PREV" >> "$GITHUB_OUTPUT"
 
       - name: Setup Python
         uses: actions/setup-python@v5
