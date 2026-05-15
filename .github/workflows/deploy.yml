@@ -66,14 +66,14 @@ jobs:
           fi
           echo "RESOURCE_GROUP=$RG" >> "$GITHUB_ENV"
 
-          APP_NAME=$(az containerapp list \
-            --resource-group "$RG" \
-            --query '[0].name' -o tsv 2>/dev/null || echo "")
-          if [ -z "$APP_NAME" ]; then
-            echo "ERROR: No container app found in resource group $RG"
+          CONTAINER_APP_NAME="shoppinglist-app"
+          # Verify the container app exists
+          az containerapp show --name "$CONTAINER_APP_NAME" --resource-group "$RG" > /dev/null 2>&1
+          if [ $? -ne 0 ]; then
+            echo "ERROR: Container app '$CONTAINER_APP_NAME' not found in resource group $RG"
             exit 1
           fi
-          echo "CONTAINER_APP_NAME=$APP_NAME" >> "$GITHUB_ENV"
+          echo "CONTAINER_APP_NAME=$CONTAINER_APP_NAME" >> "$GITHUB_ENV"
 
       - name: Deploy to Container Apps
         run: |
