@@ -81,16 +81,22 @@ jobs:
           fi
           echo "CONTAINER_APP_NAME=$CONTAINER_APP_NAME" >> "$GITHUB_ENV"
 
+      - name: Configure container registry credentials
+        run: |
+          az containerapp registry set \
+            --name "${{ env.CONTAINER_APP_NAME }}" \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --server ghcr.io \
+            --username ${{ github.actor }} \
+            --password ${{ secrets.GHCR_PAT }}
+
       - name: Deploy to Container Apps
         run: |
           az containerapp update \
             --name "${{ env.CONTAINER_APP_NAME }}" \
             --resource-group "${{ env.RESOURCE_GROUP }}" \
             --image ghcr.io/${{ env.REPOSITORY_LOWER }}:${{ github.sha }} \
-            --set-env-vars "SECRET_KEY=${{ secrets.SECRET_KEY }}" "REGISTRATION_KEY=${{ secrets.REGISTRATION_KEY }}" \
-            --registry-server ghcr.io \
-            --registry-username ${{ github.actor }} \
-            --registry-password ${{ secrets.GHCR_PAT }}
+            --set-env-vars "SECRET_KEY=${{ secrets.SECRET_KEY }}" "REGISTRATION_KEY=${{ secrets.REGISTRATION_KEY }}"
 
       - name: Get deployment URL
         run: |
