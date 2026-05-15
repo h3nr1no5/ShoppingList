@@ -20,8 +20,9 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 from fastapi import FastAPI, Depends, HTTPException, status, Query
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
+from starlette.types import Scope
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import text
@@ -607,10 +608,22 @@ async def health_check():
 
 # ==================== Static File Serving ====================
 
+
+class SPAStaticFiles(StaticFiles):
+    """StaticFiles with SPA fallback — serves index.html for unmatched paths."""
+    async def get_response(self, path: str, scope: Scope) -> Response:
+        try:
+            return await super().get_response(path, scope)
+        except HTTPException as e:
+            if e.status_code == status.HTTP_404_NOT_FOUND and self.html:
+                return await super().get_response("index.html", scope)
+            raise
+
+
 # Mount static files AFTER all API routes so /api/* and /health take priority
 STATIC_DIR = os.getenv("STATIC_DIR", "static")
 if os.path.isdir(STATIC_DIR):
-    static_app = StaticFiles(directory=STATIC_DIR, html=True)
+    static_app = SPAStaticFiles(directory=STATIC_DIR, html=True)
     app.mount("/", static_app, name="static")
 else:
     logger.warning("Static directory '%s' not found — frontend SPA will not be served", STATIC_DIR)
