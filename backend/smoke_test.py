@@ -122,7 +122,7 @@ def test_health(base_url: str) -> None:
 
 def test_spa(base_url: str) -> None:
     """Step 2: SPA — verify frontend HTML is served."""
-    print("\n[2/11] SPA check")
+    print("\n[2/11] SPA check (root & routes)")
     status, body = request(f"{base_url}/")
     check("GET /", status == 200, f"Expected 200, got {status}")
     if isinstance(body, str):
@@ -130,6 +130,23 @@ def test_spa(base_url: str) -> None:
         check("has root div", has_root, "Missing <div id='root'> in HTML")
     else:
         fail("SPA HTML", f"Expected HTML string, got JSON: {body}")
+
+    # Check frontend routes (SPA fallback)
+    status, body = request(f"{base_url}/login")
+    check("GET /login", status == 200, f"Expected 200, got {status}")
+    if isinstance(body, str):
+        has_root = '<div id="root"></div>' in body
+        check("has root div", has_root, "Missing <div id='root'> in HTML")
+    else:
+        fail("SPA /login", f"Expected HTML string, got JSON: {body}")
+
+    status, body = request(f"{base_url}/register")
+    check("GET /register", status == 200, f"Expected 200, got {status}")
+    if isinstance(body, str):
+        has_root = '<div id="root"></div>' in body
+        check("has root div", has_root, "Missing <div id='root'> in HTML")
+    else:
+        fail("SPA /register", f"Expected HTML string, got JSON: {body}")
 
 
 def test_registration(base_url: str, registration_key: str) -> tuple[str, str]:
