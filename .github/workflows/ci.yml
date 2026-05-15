@@ -26,4 +26,4 @@ jobs:
       # fail-on-error: true blocks PRs with invalid workflows from being merged
       - uses: reviewdog/action-actionlint@v1
         with:
-fail_on_error: true
+          fail_level: true
