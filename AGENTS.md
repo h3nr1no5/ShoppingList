@@ -78,7 +78,7 @@ azd provision
 **Secrets (GitHub → Actions → Secrets):**
 - `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID` — OIDC auth
 - `SECRET_KEY`, `REGISTRATION_KEY` — passed to Bicep via `@secure()` params
-- `GHCR_PAT` — PAT with `read:packages` scope (for Container App runtime pulls)
+- `GHCR_PAT` — PAT with `write:packages` and `read:packages` scopes (used for both pushing to ghcr.io and Container App runtime pulls)
 
 **Variables (GitHub → Actions → Variables):**
 - `AZURE_ENV_NAME` = `shoppinglistprod`
