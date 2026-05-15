@@ -8,6 +8,7 @@ Exercises the full API surface after a deployment to verify:
   - User registration and authentication
   - List creation and retrieval
   - Item creation and retrieval
+  - List sharing (share codes, unauthenticated access)
 
 Usage:
     python backend/smoke_test.py <BASE_URL> <REGISTRATION_KEY>
@@ -24,6 +25,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import uuid
 from typing import Optional, Union
 
 # ---------------------------------------------------------------------------
@@ -110,7 +112,7 @@ def parse_json_body(body: Union[dict, str], step: str) -> Optional[dict]:
 
 def test_health(base_url: str) -> None:
     """Step 1: Health endpoint — verify app + DB are reachable."""
-    print("\n[1/8] Health check")
+    print("\n[1/11] Health check")
     status, body = request(f"{base_url}/health")
     check("GET /health", status == 200, f"Expected 200, got {status}")
     if isinstance(body, dict):
@@ -120,7 +122,7 @@ def test_health(base_url: str) -> None:
 
 def test_spa(base_url: str) -> None:
     """Step 2: SPA — verify frontend HTML is served."""
-    print("\n[2/8] SPA check")
+    print("\n[2/11] SPA check")
     status, body = request(f"{base_url}/")
     check("GET /", status == 200, f"Expected 200, got {status}")
     if isinstance(body, str):
@@ -135,7 +137,7 @@ def test_registration(base_url: str, registration_key: str) -> tuple[str, str]:
     email = f"smoke-test-{UNIQUE_SUFFIX}@test.com"
     password = "SmokeTest123!"
 
-    print(f"\n[3/8] Registration ({email})")
+    print(f"\n[3/11] Registration ({email})")
     status, body = request(
         f"{base_url}/api/auth/register",
         method="POST",
@@ -163,7 +165,7 @@ def test_registration(base_url: str, registration_key: str) -> tuple[str, str]:
 
 def test_login(base_url: str, email: str, password: str) -> Optional[str]:
     """Step 4: Login. Returns access_token or None."""
-    print("\n[4/8] Login")
+    print("\n[4/11] Login")
     # Use x-www-form-urlencoded as per OAuth2 spec
     data = urllib.parse.urlencode({
         "username": email,
@@ -198,7 +200,7 @@ def test_login(base_url: str, email: str, password: str) -> Optional[str]:
 
 def test_create_list(base_url: str, token: str) -> Optional[str]:
     """Step 5: Create a shopping list. Returns list_id or None."""
-    print("\n[5/8] Create list")
+    print("\n[5/11] Create list")
     status, body = request(
         f"{base_url}/api/lists",
         method="POST",
@@ -216,7 +218,7 @@ def test_create_list(base_url: str, token: str) -> Optional[str]:
 
 def test_add_item(base_url: str, token: str, list_id: str) -> None:
     """Step 6: Add an item to the list."""
-    print("\n[6/8] Add item")
+    print("\n[6/11] Add item")
     status, body = request(
         f"{base_url}/api/lists/{list_id}/items",
         method="POST",
@@ -232,7 +234,7 @@ def test_add_item(base_url: str, token: str, list_id: str) -> None:
 
 def test_get_items(base_url: str, token: str, list_id: str) -> None:
     """Step 7: Retrieve items and verify the added item exists."""
-    print("\n[7/8] Get items")
+    print("\n[7/11] Get items")
     status, body = request(
         f"{base_url}/api/lists/{list_id}/items",
         headers={"Authorization": f"Bearer {token}"},
@@ -259,11 +261,75 @@ def test_get_items(base_url: str, token: str, list_id: str) -> None:
         check("found 'Smoke Test Item'", match, str(items))
 
 
+def test_generate_share_code(base_url: str, token: str, list_id: str) -> Optional[str]:
+    """Step 8: Generate a share code for an existing list. Returns share_code or None."""
+    print("\n[8/11] Generate share code")
+    status, body = request(
+        f"{base_url}/api/lists/{list_id}/share",
+        method="POST",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    body_dict = parse_json_body(body, "generate share code")
+    if body_dict and status == 200:
+        share_code = body_dict.get("share_code")
+        check("generate share code", share_code is not None, str(body_dict))
+        # Validate UUID format
+        is_valid_uuid = isinstance(share_code, str)
+        try:
+            uuid.UUID(share_code)
+        except (ValueError, AttributeError):
+            is_valid_uuid = False
+        check("share code is valid UUID", is_valid_uuid, str(share_code))
+        return share_code
+    fail("generate share code", f"Expected 200, got {status}: {body}")
+    return None
+
+
+def test_access_shared_list(base_url: str, share_code: str) -> None:
+    """Step 9: Access the shared list WITHOUT auth using the share code."""
+    print("\n[9/11] Access shared list (no auth)")
+    status, body = request(f"{base_url}/api/lists/shared/{share_code}")
+    body_dict = parse_json_body(body, "access shared list")
+    if not body_dict or status != 200:
+        fail("access shared list", f"Expected 200, got {status}: {body}")
+        return
+    check("list name == 'Smoke Test List'", body_dict.get("name") == "Smoke Test List", str(body_dict))
+    check("list id present", body_dict.get("id") is not None, str(body_dict))
+
+
+def test_access_items_via_share_code(base_url: str, list_id: str, share_code: str) -> None:
+    """Step 10: Access items via share_code query param WITHOUT auth."""
+    print("\n[10/11] Access items via share code (no auth)")
+    status, body = request(
+        f"{base_url}/api/lists/{list_id}/items?share_code={share_code}"
+    )
+    if status != 200:
+        fail("access items via share code", f"Expected 200, got {status}: {body}")
+        return
+
+    items = body if isinstance(body, list) else []
+    check("access items via share code (200)", status == 200)
+    check(
+        "item count >= 1",
+        len(items) >= 1,
+        f"Expected >=1 item, got {len(items)}",
+    )
+    if items:
+        try:
+            match = any(
+                isinstance(item, dict) and item.get("name") == "Smoke Test Item"
+                for item in items
+            )
+        except Exception:
+            match = False
+        check("found 'Smoke Test Item'", match, str(items))
+
+
 def cleanup(base_url: str, token: str, list_id: Optional[str]) -> None:
     """Clean up: delete the test list (best-effort, don't fail on error)."""
     if not list_id or not token:
         return
-    print("\n[8/8] Cleanup")
+    print("\n[11/11] Cleanup")
     try:
         req = urllib.request.Request(
             f"{base_url}/api/lists/{list_id}",
@@ -324,8 +390,17 @@ def main() -> int:
         if list_id:
             test_add_item(base_url, token, list_id)
             test_get_items(base_url, token, list_id)
+            # Step 8-10: Test list sharing
+            share_code = test_generate_share_code(base_url, token, list_id)
+            if share_code:
+                test_access_shared_list(base_url, share_code)
+                test_access_items_via_share_code(base_url, list_id, share_code)
+            else:
+                print("\n  SKIP [8-10/11] Skipping sharing tests (share code generation failed)")
+        else:
+            print("\n  SKIP [6-11/11] Skipping remaining API tests (list creation failed)")
     else:
-        print("\n  SKIP [5-7/8] Skipping API tests (login failed)")
+        print("\n  SKIP [5-11/11] Skipping API tests (login failed)")
 
     cleanup(base_url, token, list_id)
 

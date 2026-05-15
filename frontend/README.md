@@ -136,7 +136,7 @@ Built as part of the root multi-stage Dockerfile. The frontend is built in the N
 
 Deployed as part of a single container app alongside the FastAPI backend. Push to `main` triggers GitHub Actions → builds root Dockerfile → deploys to Azure.
 
-- **URL:** `https://shoppinglist-web.victorioushill-2f5d1c85.northeurope.azurecontainerapps.io/`
+- **URL:** `https://shoppinglist-app.victorioushill-2f5d1c85.northeurope.azurecontainerapps.io/`
 - **Architecture:** Single container serves both API (`/api/*`) and frontend (`/`) from same origin
 
 ## Troubleshooting

@@ -106,12 +106,12 @@ Set in `infra/main.bicep` as `@secure()` parameters, passed from GitHub Actions:
 ### View URL
 Check the GitHub Action output, or:
 ```bash
-az containerapp show --name shoppinglistprod-app --resource-group rg-shoppinglistprod --query properties.configuration.ingress.fqdn -o tsv
+az containerapp show --name shoppinglist-app --resource-group rg-ShoppingListProd --query properties.configuration.ingress.fqdn -o tsv
 ```
 
 ### Check Logs
 ```bash
-az containerapp logs show --name shoppinglistprod-app --resource-group rg-shoppinglistprod --tail 50
+az containerapp logs show --name shoppinglist-app --resource-group rg-ShoppingListProd --tail 50
 ```
 
 ### Smoke Tests

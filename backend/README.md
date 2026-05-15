@@ -128,8 +128,8 @@ SMOKE_BASE_URL=<url> SMOKE_REGISTRATION_KEY=<key> python smoke_test.py
 
 The backend is deployed as part of a single container app with the frontend:
 
-- **URL**: https://shoppinglist-web.victorioushill-2f5d1c85.northeurope.azurecontainerapps.io/
-- **API Docs**: https://shoppinglist-web.victorioushill-2f5d1c85.northeurope.azurecontainerapps.io/docs
+- **URL**: https://shoppinglist-app.victorioushill-2f5d1c85.northeurope.azurecontainerapps.io/
+- **API Docs**: https://shoppinglist-app.victorioushill-2f5d1c85.northeurope.azurecontainerapps.io/docs
 
 ### Deploying to Azure
 
@@ -160,9 +160,9 @@ Secrets are passed to the Bicep template via GitHub Actions variables.
 
 Interactive API documentation is available at:
 
-**Swagger UI**: https://shoppinglist-web.victorioushill-2f5d1c85.northeurope.azurecontainerapps.io/docs
+**Swagger UI**: https://shoppinglist-app.victorioushill-2f5d1c85.northeurope.azurecontainerapps.io/docs
 
-**ReDoc**: https://shoppinglist-web.victorioushill-2f5d1c85.northeurope.azurecontainerapps.io/redoc
+**ReDoc**: https://shoppinglist-app.victorioushill-2f5d1c85.northeurope.azurecontainerapps.io/redoc
 
 ## Architecture
 
