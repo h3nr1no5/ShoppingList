@@ -62,7 +62,10 @@ jobs:
 
       - name: Get resource group and container app name
         run: |
-          RG=$(az group list --query "[?name=='${{ env.AZURE_ENV_NAME }}'].name" -o tsv)
+          RG=$(az group list --query "[?contains(name, '${{ env.AZURE_ENV_NAME }}')].name" -o tsv | head -1)
+          if [ -z "$RG" ]; then
+            RG=$(az group list --query '[0].name' -o tsv 2>/dev/null || echo "")
+          fi
           if [ -z "$RG" ]; then
             echo "ERROR: Resource group '${{ env.AZURE_ENV_NAME }}' not found"
             exit 1
