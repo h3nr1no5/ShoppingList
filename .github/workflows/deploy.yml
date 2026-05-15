@@ -164,7 +164,7 @@ jobs:
         if: failure()
         run: |
           echo "Deployment failed, rolling back to previous revision..."
-          az containerapp revision restore \
+          az containerapp revision activate \
             --name "${{ env.CONTAINER_APP_NAME }}" \
             --resource-group "${{ env.RESOURCE_GROUP }}" \
             --revision "${{ steps.prev-revision.outputs.previous }}"
