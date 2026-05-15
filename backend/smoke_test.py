@@ -156,7 +156,7 @@ def test_registration(base_url: str, registration_key: str) -> tuple[str, str]:
     if status == 201 or status == 200:
         body_dict = parse_json_body(body, "register")
         if body_dict:
-            check("register", body_dict.get("id") is not None, str(body_dict))
+            check("register", body_dict.get("access_token") is not None, str(body_dict))
     else:
         fail("register", f"Expected 200/201/409, got {status}: {body}")
 
@@ -175,7 +175,7 @@ def test_login(base_url: str, email: str, password: str) -> Optional[str]:
 
     try:
         req = urllib.request.Request(
-            f"{base_url}/api/auth/token",
+            f"{base_url}/api/auth/login",
             data=data,
             headers={
                 "Content-Type": "application/x-www-form-urlencoded",
