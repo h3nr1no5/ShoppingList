@@ -35,6 +35,14 @@ test.describe('Navigation and routing', () => {
   test('shows error message for invalid list id', async ({ authedPage }) => {
     await authedPage.goto('/lists/00000000-0000-0000-0000-000000000000');
 
+    // Wait for the API request to complete before checking for the toast.
+    // This ensures the error handler has fired and the toast has been added,
+    // avoiding race conditions with slow API responses on WebKit in CI.
+    await authedPage.waitForResponse(
+      response => response.url().includes('/api/lists/00000000-') &&
+                  response.request().method() === 'GET'
+    );
+
     // Wait for the toast error message to appear.
     // Note: Avoid toBeVisible() on .toast-container — it uses getBoundingClientRect
     // which can return zero dimensions on WebKit headless Linux for position:fixed elements.

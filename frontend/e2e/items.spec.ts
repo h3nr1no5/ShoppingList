@@ -111,7 +111,13 @@ test.describe('Item management', () => {
 
       // Add item
       await authedPage.fill('[placeholder="Add new item..."]', itemName);
+      // Set up response waiter BEFORE clicking Add
+      const addResponsePromise = authedPage.waitForResponse(
+        response => /\/api\/lists\/[^/]+\/items\/?$/.test(response.url()) &&
+            response.request().method() === 'POST'
+      );
       await authedPage.click('button:has-text("Add")');
+      await addResponsePromise; // Wait for API to complete
       await expect(authedPage.locator(`text=${itemName}`)).toBeVisible();
 
       // Find the delete button within the list-item container
@@ -141,7 +147,7 @@ test.describe('Item management', () => {
       await expect(authedPage.locator('.list-item').filter({ hasText: itemName })).toHaveCount(1);
     });
 
-    test('renaming an item to an existing name succeeds', async ({ authedPage }) => {
+    test('renaming an item to an existing name is rejected', async ({ authedPage }) => {
       const base = `Dupe Rename ${Date.now()}`;
       const nameA = `${base} A`;
       const nameB = `${base} B`;
@@ -149,9 +155,22 @@ test.describe('Item management', () => {
 
       // Add two items with different names
       await authedPage.fill('[placeholder="Add new item..."]', nameA);
+      const addAResponse = authedPage.waitForResponse(
+        response => /\/api\/lists\/[^/]+\/items\/?$/.test(response.url()) &&
+            response.request().method() === 'POST'
+      );
       await authedPage.click('button:has-text("Add")');
+      await addAResponse;
+      await expect(authedPage.locator('.list-item').filter({ hasText: nameA })).toHaveCount(1);
+
       await authedPage.fill('[placeholder="Add new item..."]', nameB);
+      const addBResponse = authedPage.waitForResponse(
+        response => /\/api\/lists\/[^/]+\/items\/?$/.test(response.url()) &&
+            response.request().method() === 'POST'
+      );
       await authedPage.click('button:has-text("Add")');
+      await addBResponse;
+      await expect(authedPage.locator('.list-item').filter({ hasText: nameB })).toHaveCount(1);
 
       // Rename B to A's name
       const itemRow = authedPage.locator('.list-item').filter({ hasText: nameB });
