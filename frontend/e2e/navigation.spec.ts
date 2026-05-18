@@ -22,18 +22,26 @@ test.describe('Navigation and routing', () => {
   });
 
   test('shows loading state while fetching list', async ({ authedPage }) => {
-    // Navigate to a non-existent list ID
     await authedPage.goto('/lists/00000000-0000-0000-0000-000000000000');
 
-    // Should show loading or error state
-    await authedPage.waitForTimeout(1000);
-    const loading = await authedPage.locator('text=Loading').isVisible().catch(() => false);
-    const error = await authedPage.locator('text=couldn').isVisible().catch(() => false);
-    expect(loading || error).toBeTruthy();
+    // Should show loading or error state.
+    // Use retry assertion for CI reliability (especially WebKit on slow runners).
+    await expect(async () => {
+        const text = await authedPage.locator('body').textContent();
+        expect(text).toMatch(/Loading|couldn/i);
+    }).toPass({ timeout: 10000 });
   });
 
   test('shows error message for invalid list id', async ({ authedPage }) => {
     await authedPage.goto('/lists/00000000-0000-0000-0000-000000000000');
+
+    // Wait for the API request to complete before checking for the toast.
+    // This ensures the error handler has fired and the toast has been added,
+    // avoiding race conditions with slow API responses on WebKit in CI.
+    await authedPage.waitForResponse(
+      response => response.url().includes('/api/lists/00000000-') &&
+                  response.request().method() === 'GET'
+    );
 
     // Wait for the toast error message to appear.
     // Note: Avoid toBeVisible() on .toast-container — it uses getBoundingClientRect
