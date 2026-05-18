@@ -1,6 +1,7 @@
 # Azure parameters with secrets
-infra/parameters.json
-infra/main.parameters.json
+
+infra/*.parameters.json
+
 
 # Environment files with secrets
 .azure/
