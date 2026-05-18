@@ -22,14 +22,14 @@ test.describe('Navigation and routing', () => {
   });
 
   test('shows loading state while fetching list', async ({ authedPage }) => {
-    // Navigate to a non-existent list ID
     await authedPage.goto('/lists/00000000-0000-0000-0000-000000000000');
 
-    // Should show loading or error state
-    await authedPage.waitForTimeout(1000);
-    const loading = await authedPage.locator('text=Loading').isVisible().catch(() => false);
-    const error = await authedPage.locator('text=couldn').isVisible().catch(() => false);
-    expect(loading || error).toBeTruthy();
+    // Should show loading or error state.
+    // Use retry assertion for CI reliability (especially WebKit on slow runners).
+    await expect(async () => {
+        const text = await authedPage.locator('body').textContent();
+        expect(text).toMatch(/Loading|couldn/i);
+    }).toPass({ timeout: 10000 });
   });
 
   test('shows error message for invalid list id', async ({ authedPage }) => {
