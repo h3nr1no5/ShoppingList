@@ -79,6 +79,10 @@ jobs:
       # ---- Spin Up ACI ----
 
       - name: Create staging container instance
+        env:
+          ACI_SECRET_KEY: "${{ secrets.SECRET_KEY }}"
+          ACI_REG_KEY: "${{ secrets.REGISTRATION_KEY }}"
+          ACI_DATABASE_URL: "${{ secrets.DATABASE_URL }}"
         run: |
           az container create \
             --resource-group "${{ env.RESOURCE_GROUP }}" \
@@ -89,9 +93,9 @@ jobs:
             --registry-username ${{ github.actor }} \
             --registry-password ${{ secrets.GHCR_PAT }} \
             --environment-variables \
-              "SECRET_KEY=${{ secrets.SECRET_KEY }}" \
-              "REGISTRATION_KEY=${{ secrets.REGISTRATION_KEY }}" \
-              "DATABASE_URL=${{ secrets.DATABASE_URL }}" \
+              "SECRET_KEY=$ACI_SECRET_KEY" \
+              "REGISTRATION_KEY=$ACI_REG_KEY" \
+              "DATABASE_URL=$ACI_DATABASE_URL" \
             --ports 8000 \
             --restart-policy Never
 
