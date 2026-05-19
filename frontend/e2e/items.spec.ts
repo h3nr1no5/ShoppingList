@@ -98,6 +98,10 @@ test.describe('Item management', () => {
 
       // Change name and save
       await authedPage.fill('[aria-label="Item name"]', updatedName);
+      // Wait for React re-render to stabilize before clicking save.
+      // The fill triggers state updates that re-render the form; without this
+      // wait the button can get detached from the DOM on slower browsers (WebKit).
+      await authedPage.locator('button[title="Save changes"]').waitFor({ state: 'visible' });
       await authedPage.click('button[title="Save changes"]');
 
       await expect(authedPage.locator(`text=${updatedName}`)).toBeVisible();

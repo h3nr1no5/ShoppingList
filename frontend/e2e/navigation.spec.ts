@@ -45,18 +45,17 @@ test.describe('Navigation and routing', () => {
   test('shows error message for invalid list id', async ({ authedPage }) => {
     await authedPage.goto('/lists/00000000-0000-0000-0000-000000000000');
 
-    // Wait for the API request to complete before checking for the toast.
-    // This ensures the error handler has fired and the toast has been added,
-    // avoiding race conditions with slow API responses on WebKit in CI.
+    // Wait for the API request to complete — ensures the error handler has fired.
     await authedPage.waitForResponse(
       response => response.url().includes('/api/lists/00000000-') &&
                   response.request().method() === 'GET'
     );
 
-    // Wait for the toast error message to appear.
-    // Note: Avoid toBeVisible() on .toast-container — it uses getBoundingClientRect
-    // which can return zero dimensions on WebKit headless Linux for position:fixed elements.
-    await expect(authedPage.locator('.toast-message')).toContainText("Couldn't load the list", { timeout: 7000 });
+    // Wait for the error message to appear in the page body.
+    // The ListDetail component shows an .error-state when list fetch fails,
+    // providing a reliable error indicator across all browsers (unlike the toast
+    // which uses position:fixed and can have rendering issues on WebKit headless Linux).
+    await expect(authedPage.locator('.error-state')).toContainText("Couldn't load the list", { timeout: 10000 });
   });
 
   test('shows login page for /login route', async ({ browser }) => {

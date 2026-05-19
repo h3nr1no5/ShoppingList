@@ -272,7 +272,7 @@ describe('ListDetail - Edit List Name', () => {
       renderWithAuth(<ListDetail />);
 
       await waitFor(() => {
-        expect(screen.getByText(/couldn't load the list/i)).toBeInTheDocument();
+        expect(screen.getAllByText(/couldn't load the list/i)).toHaveLength(2);
       });
     });
   });

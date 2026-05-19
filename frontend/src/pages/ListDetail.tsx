@@ -356,7 +356,11 @@ const ListDetail: React.FC = () => {
     return (
       <div className="page">
         <Header />
-        {/* Toast already shown by fetchList error handler */}
+        <main className="main">
+          <div className="empty-state error-state">
+            <p>{t('errors.failed_to_load_list')}</p>
+          </div>
+        </main>
       </div>
     );
   }
