@@ -26,6 +26,9 @@ from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.types import Scope
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.requests import Request
+from slowapi import Limiter
+from slowapi.errors import RateLimitExceeded
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -88,6 +91,33 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Rate limiting setup
+def get_client_ip(request: Request) -> str:
+    """Extract real client IP from X-Forwarded-For (set by Azure Container Apps).
+    Falls back to request.client.host if header is absent."""
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        # X-Forwarded-For can contain multiple IPs: client, proxy1, proxy2
+        # The leftmost is the original client
+        return forwarded.split(",")[0].strip()
+    return request.client.host or "127.0.0.1"
+
+
+limiter = Limiter(key_func=get_client_ip)
+app.state.limiter = limiter
+
+
+async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    """Custom 429 handler with Retry-After header."""
+    return JSONResponse(
+        status_code=429,
+        content={"detail": "Rate limit exceeded. Please try again later."},
+        headers={"Retry-After": "60"},
+    )
+
+
+app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
 
 
 # ==================== Dependency Functions ====================
@@ -161,7 +191,9 @@ async def get_item_with_list_access(
 
 
 @app.post("/api/auth/register", response_model=TokenResponse, tags=["auth"])
+@limiter.limit("5/minute")
 async def register(
+    request: Request,
     user_data: UserCreate,
     db: AsyncSession = Depends(get_db),
 ):
@@ -190,7 +222,9 @@ async def register(
 
 
 @app.post("/api/auth/login", response_model=TokenResponse, tags=["auth"])
+@limiter.limit("10/minute")
 async def login(
+    request: Request,
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: AsyncSession = Depends(get_db),
 ):
@@ -359,7 +393,9 @@ async def create_share_link(
     response_model=ShoppingListWithItemsResponse,
     tags=["lists"],
 )
+@limiter.limit("30/minute")
 async def get_shared_list(
+    request: Request,
     share_code: uuid.UUID,
     db: AsyncSession = Depends(get_db),
 ):
