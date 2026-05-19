@@ -1,7 +1,7 @@
 ---
 description: High-level architect that proposes designs, refactoring strategies, and technical decisions.
 mode: subagent
-model: opencode/minimax-m2.5-free
+model: opencode/big-pickle
 temperature: 0.25
 tools:
   read: true
