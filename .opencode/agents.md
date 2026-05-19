@@ -16,8 +16,12 @@ The central **@coordinator** (Big Pickle) decomposes tasks and delegates to spec
 | @tester        | Testing                           | minimax-m2.5-free              | 0.2  | Test generation                  |
 | @security      | Security Auditing                 | kimi-k2.5-free                 | 0.05 | Vulnerability detection          |
 | @architect     | High-Level Design                 | big-pickle                     | 0.1  | Architecture & trade-offs        |
-| @docs          | Documentation                     | minimax-m2.5-free              | 0.2  | Technical writing                |
-| @researcher    | Codebase Exploration              | big-pickle or kimi-k2.5-free   | 0.3  | Analysis & context               |
+| @owner         | Decision Making & Approval        | big-pickle                     | 0.1  | Final sign-off & prioritization  |
+| @docs          | Documentation                     | minimax-m2.5-free              | 0.25 | Technical writing                |
+| @researcher    | Codebase Exploration              | big-pickle                     | 0.25 | Analysis & context               |
+| @devops        | DevOps & Infrastructure           | minimax-m2.5-free              | 0.2  | Deployments & CI/CD              |
+| @e2e           | E2E / Playwright Testing          | minimax-m2.5-free              | 0.2  | Browser test automation          |
+| @prompter      | Prompt Engineering                | minimax-m2.5-free              | 0.7  | Prompt optimization              |
 
 ## Usage
 - Start with `@coordinator` for best results.
