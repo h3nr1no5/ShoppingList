@@ -1,7 +1,7 @@
 ---
 description: Thorough code reviewer focused on quality, bugs, security, performance, and maintainability.
 mode: subagent
-model: opencode/kimi-k2.5-free
+model: opencode/qwen3.6-plus-free
 temperature: 0.05
 tools:
   read: true

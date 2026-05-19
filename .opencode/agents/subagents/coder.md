@@ -2,7 +2,7 @@
 description: Specialized coding agent that writes, edits, and refactors code based on clear specifications.
 mode: subagent
 model: opencode/minimax-m2.5-free
-temperature: 0.25
+temperature: 0.2
 tools:
   read: true
   list: true

@@ -2,7 +2,7 @@
 description: Prompt engineer improving prompts
 mode: subagent
 model: opencode/minimax-m2.5-free
-temperature: 0.7
+temperature: 0.5
 tools:
   read: true
   list: true
