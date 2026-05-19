@@ -193,7 +193,9 @@ jobs:
         env:
           SECRET_KEY: ci-secret-key-for-e2e-tests
           REGISTRATION_KEY: ci-reg-key-for-e2e-tests
-          RATELIMIT_ENABLED: "false"
+          REGISTER_RATE_LIMIT: "100/minute"
+          LOGIN_RATE_LIMIT: "200/minute"
+          SHARED_LIST_RATE_LIMIT: "500/minute"
 
       - name: Run Playwright E2E tests
         # --no-install: use local playwright from node_modules after npm ci, avoid npx cache

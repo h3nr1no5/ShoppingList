@@ -129,7 +129,9 @@ jobs:
               "SECRET_KEY=$ACI_SECRET_KEY" \
               "REGISTRATION_KEY=$ACI_REG_KEY" \
               "DATABASE_URL=$ACI_DATABASE_URL" \
-              "RATELIMIT_ENABLED=false" \
+              "REGISTER_RATE_LIMIT=100/minute" \
+              "LOGIN_RATE_LIMIT=200/minute" \
+              "SHARED_LIST_RATE_LIMIT=500/minute" \
             --os-type Linux \
             --ip-address Public \
             --ports 8000 \
