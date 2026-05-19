@@ -21,15 +21,28 @@ test.describe('Navigation and routing', () => {
     await context.close();
   });
 
-  test('shows loading state while fetching list', async ({ authedPage }) => {
+  test('shows loading state while fetching list', async ({ authedPage }, testInfo) => {
+    // WebKit on CI resolves the API call too quickly for the loading state to be observable.
+    // Delay the response to ensure the loading state renders before the request completes.
+    let delayListResponse: ((route: any) => Promise<void>) | undefined;
+    if (testInfo.project.name === 'webkit') {
+        delayListResponse = async (route) => {
+            await new Promise((resolve) => setTimeout(resolve, 2000));
+            await route.continue();
+        };
+        await authedPage.route('**/api/lists/**', delayListResponse);
+    }
+
     await authedPage.goto('/lists/00000000-0000-0000-0000-000000000000');
 
-    // Should show loading or error state.
-    // Use retry assertion for CI reliability (especially WebKit on slow runners).
     await expect(async () => {
         const text = await authedPage.locator('body').textContent();
         expect(text).toMatch(/Loading|couldn/i);
     }).toPass({ timeout: 10000 });
+
+    if (testInfo.project.name === 'webkit' && delayListResponse) {
+        await authedPage.unroute('**/api/lists/**', delayListResponse);
+    }
   });
 
   test('shows error message for invalid list id', async ({ authedPage }) => {
