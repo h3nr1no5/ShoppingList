@@ -16,6 +16,11 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 
+# Rate limiting configuration — overridable via env vars
+REGISTER_RATE_LIMIT = os.getenv("REGISTER_RATE_LIMIT", "5/minute")
+LOGIN_RATE_LIMIT = os.getenv("LOGIN_RATE_LIMIT", "10/minute")
+SHARED_LIST_RATE_LIMIT = os.getenv("SHARED_LIST_RATE_LIMIT", "30/minute")
+
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +31,9 @@ from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.types import Scope
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.requests import Request
+from slowapi import Limiter
+from slowapi.errors import RateLimitExceeded
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -88,6 +96,34 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Rate limiting setup
+def get_client_ip(request: Request) -> str:
+    """Extract real client IP from X-Forwarded-For (set by Azure Container Apps).
+    Falls back to request.client.host if header is absent."""
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        # X-Forwarded-For can contain multiple IPs: client, proxy1, proxy2
+        # The leftmost is the original client
+        return forwarded.split(",")[0].strip()
+    return request.client.host or "127.0.0.1"
+
+
+RATELIMIT_ENABLED = os.getenv("RATELIMIT_ENABLED", "true").lower() != "false"
+limiter = Limiter(key_func=get_client_ip, enabled=RATELIMIT_ENABLED)
+app.state.limiter = limiter
+
+
+async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    """Custom 429 handler with Retry-After header."""
+    return JSONResponse(
+        status_code=429,
+        content={"detail": "Rate limit exceeded. Please try again later."},
+        headers={"Retry-After": "60"},
+    )
+
+
+app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
 
 
 # ==================== Dependency Functions ====================
@@ -161,7 +197,9 @@ async def get_item_with_list_access(
 
 
 @app.post("/api/auth/register", response_model=TokenResponse, tags=["auth"])
+@limiter.limit(REGISTER_RATE_LIMIT)
 async def register(
+    request: Request,
     user_data: UserCreate,
     db: AsyncSession = Depends(get_db),
 ):
@@ -190,7 +228,9 @@ async def register(
 
 
 @app.post("/api/auth/login", response_model=TokenResponse, tags=["auth"])
+@limiter.limit(LOGIN_RATE_LIMIT)
 async def login(
+    request: Request,
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: AsyncSession = Depends(get_db),
 ):
@@ -359,7 +399,9 @@ async def create_share_link(
     response_model=ShoppingListWithItemsResponse,
     tags=["lists"],
 )
+@limiter.limit(SHARED_LIST_RATE_LIMIT)
 async def get_shared_list(
+    request: Request,
     share_code: uuid.UUID,
     db: AsyncSession = Depends(get_db),
 ):

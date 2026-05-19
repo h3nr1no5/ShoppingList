@@ -174,7 +174,8 @@ jobs:
         run: npm ci
 
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps
+        # --no-install: use local playwright from node_modules after npm ci, avoid npx cache
+        run: npx --no-install playwright install --with-deps
 
       - name: Start backend server
         working-directory: backend
@@ -192,12 +193,17 @@ jobs:
         env:
           SECRET_KEY: ci-secret-key-for-e2e-tests
           REGISTRATION_KEY: ci-reg-key-for-e2e-tests
+          REGISTER_RATE_LIMIT: "100/minute"
+          LOGIN_RATE_LIMIT: "200/minute"
+          SHARED_LIST_RATE_LIMIT: "500/minute"
 
       - name: Run Playwright E2E tests
-        run: npx playwright test
+        # --no-install: use local playwright from node_modules after npm ci, avoid npx cache
+        run: npx --no-install playwright test
         env:
           E2E_INVITE_CODE: ci-reg-key-for-e2e-tests
           REGISTRATION_KEY: ci-reg-key-for-e2e-tests
+          E2E_AUTH_FILE: ./e2e/.auth/user.json
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v7
