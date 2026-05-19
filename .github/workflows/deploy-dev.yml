@@ -97,6 +97,7 @@ jobs:
               "REGISTRATION_KEY=$ACI_REG_KEY" \
               "DATABASE_URL=$ACI_DATABASE_URL" \
             --os-type Linux \
+            --ip-address Public \
             --ports 8000 \
             --restart-policy Never
 
