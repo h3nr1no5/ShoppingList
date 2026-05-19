@@ -273,7 +273,7 @@ describe('ListDetail - Offline Queue Behavior', () => {
   describe('When online with API failure', () => {
     it('enqueues a toggle change when the API call fails', async () => {
       // Make apiClientNoRedirect.put reject to simulate network failure
-      (apiClientNoRedirect as any).put.mockRejectedValue(
+      vi.mocked(apiClientNoRedirect.put).mockRejectedValue(
         new Error('Network error')
       );
 
