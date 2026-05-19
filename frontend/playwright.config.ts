@@ -37,6 +37,12 @@ export default defineConfig({
       timeout: 120000,
       stdout: 'pipe',
       stderr: 'pipe',
+      env: {
+        REGISTER_RATE_LIMIT: process.env.REGISTER_RATE_LIMIT || '100/minute',
+        LOGIN_RATE_LIMIT: process.env.LOGIN_RATE_LIMIT || '200/minute',
+        SHARED_LIST_RATE_LIMIT: process.env.SHARED_LIST_RATE_LIMIT || '500/minute',
+        E2E_INVITE_CODE: process.env.E2E_INVITE_CODE || '',
+      },
     },
     {
       command: 'npm run dev',
