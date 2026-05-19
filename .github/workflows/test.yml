@@ -4,6 +4,10 @@ on:
   pull_request:
     branches: [main, dev]
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   backend-test:
     runs-on: ubuntu-latest
@@ -28,7 +32,7 @@ jobs:
       - uses: actions/checkout@v5
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.11"
 
@@ -82,13 +86,16 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Install Azure CLI
+      - name: Install Bicep CLI
         run: |
-          curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+          BICEP_VERSION="v0.33.93"
+          curl -sL "https://github.com/Azure/bicep/releases/download/${BICEP_VERSION}/bicep-linux-x64" -o bicep
+          chmod +x bicep
+          sudo mv bicep /usr/local/bin/bicep
 
       - name: Validate Bicep templates
         run: |
-          az bicep build --file infra/main.bicep
+          bicep build infra/main.bicep
           echo "Bicep templates compiled successfully"
 
   frontend-e2e:
@@ -115,7 +122,7 @@ jobs:
       - uses: actions/checkout@v5
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.11"
 
@@ -163,7 +170,7 @@ jobs:
           REGISTRATION_KEY: ci-reg-key-for-e2e-tests
 
       - name: Upload Playwright report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: playwright-report

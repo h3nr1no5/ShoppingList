@@ -21,6 +21,12 @@ vi.mock('../api/client', async () => {
       post: vi.fn(),
       delete: vi.fn(),
     },
+    apiClientNoRedirect: {
+      get: vi.fn(),
+      put: vi.fn(),
+      post: vi.fn(),
+      delete: vi.fn(),
+    },
     generateShareLink: vi.fn(),
   };
 });
@@ -35,7 +41,7 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
-import apiClient from '../api/client';
+import apiClient, { apiClientNoRedirect } from '../api/client';
 import { useParams } from 'react-router-dom';
 
 const mockApiClient = apiClient as unknown as {
@@ -266,9 +272,10 @@ describe('ListDetail - Offline Queue Behavior', () => {
 
   describe('When online with API failure', () => {
     it('enqueues a toggle change when the API call fails', async () => {
-      // Mock apiClientNoRedirect.put to reject
-      // The apiClientNoRedirect is the actual axios, not mocked by default,
-      // so we need to mock it at module level.
+      // Make apiClientNoRedirect.put reject to simulate network failure
+      vi.mocked(apiClientNoRedirect.put).mockRejectedValue(
+        new Error('Network error')
+      );
 
       // Wait for the list to load with mock API
       renderWithAuth(<ListDetail />, true, true);
@@ -281,9 +288,7 @@ describe('ListDetail - Offline Queue Behavior', () => {
       const checkboxes = screen.getAllByRole('checkbox');
       fireEvent.click(checkboxes[0]);
 
-      // Since apiClientNoRedirect is the real axios and we're in jsdom,
-      // the request will fail (no server), so the catch handler should
-      // enqueue the change.
+      // The API call should fail, and the change should be enqueued locally
       await waitFor(
         () => {
           const storageData = localStorage.getItem('pending_changes_list-1');

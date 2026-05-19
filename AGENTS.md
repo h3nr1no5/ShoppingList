@@ -64,6 +64,8 @@ cd frontend && npm run lint    # eslint
 
 Deployed via GitHub Actions to Azure Container Apps. Push to `main` triggers the workflow which builds the image, pushes to ghcr.io, updates the container app, and runs smoke tests.
 
+**Staging:** Push to `dev` triggers an ephemeral staging deployment via Azure Container Instances (ACI). A container spins up, runs E2E + smoke tests against it, then is destroyed. Cost: ~$0.02 per run.
+
 **Initial provisioning:**
 ```bash
 az login
@@ -73,17 +75,20 @@ azd provision
 
 **Automatic deploy:** Push to `main` → GitHub Actions deploys automatically.
 
+**Staging deploy:** Push to `dev` → ACI staging environment (ephemeral, auto-cleanup).
+
 **Production URL:** `https://shoppinglist-app.victorioushill-2f5d1c85.northeurope.azurecontainerapps.io/`
 
 **Secrets (GitHub → Actions → Secrets):**
 - `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID` — OIDC auth
 - `SECRET_KEY`, `REGISTRATION_KEY` — passed to Bicep via `@secure()` params
+- `DATABASE_URL` — full PostgreSQL connection string (required for ACI staging)
 - `GHCR_PAT` — PAT with `write:packages` and `read:packages` scopes (used for both pushing to ghcr.io and Container App runtime pulls)
 
 **Variables (GitHub → Actions → Variables):**
 - `AZURE_ENV_NAME` = `shoppinglistprod`
 
-**CI:** `test.yml` runs tests on push/PR to `main`. `deploy.yml` deploys on push to `main`.
+**CI:** `test.yml` runs tests on push/PR to `main` and `dev`. `deploy.yml` deploys on push to `main`. `deploy-dev.yml` runs ACI staging on push to `dev`.
 
 ## Test Fixtures (conftest.py)
 
@@ -112,5 +117,8 @@ azd provision
 - `frontend/src/App.tsx` — router + auth context
 - `frontend/src/hooks/useOfflineQueue.ts` — offline mutation queue hook
 - `frontend/e2e/` — Playwright E2E tests
+- `frontend/playwright.deploy.config.ts` — deployment-specific E2E config (no webServer, runs against deployed instance)
 - `run-e2e-tests.sh` — convenience script for local E2E tests
+- `.github/workflows/deploy-dev.yml` — ACI staging workflow (ephemeral, push to `dev`)
+- `.github/workflows/deploy.yml` — production deployment workflow (push to `main`)
 - `infra/main.bicep` — Azure infrastructure (single container app)

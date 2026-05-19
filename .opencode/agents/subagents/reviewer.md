@@ -1,7 +1,7 @@
 ---
 description: Thorough code reviewer focused on quality, bugs, security, performance, and maintainability.
 mode: subagent
-model: opencode/big-pickle
+model: opencode/kimi-k2.5-free
 temperature: 0.05
 tools:
   read: true
