@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures';
+import type { Route } from '@playwright/test';
 
 test.describe('Navigation and routing', () => {
   test('redirects unauthenticated user to login', async ({ browser }) => {
@@ -24,7 +25,7 @@ test.describe('Navigation and routing', () => {
   test('shows loading state while fetching list', async ({ authedPage }, testInfo) => {
     // WebKit on CI resolves the API call too quickly for the loading state to be observable.
     // Delay the response to ensure the loading state renders before the request completes.
-    let delayListResponse: ((route: any) => Promise<void>) | undefined;
+    let delayListResponse: ((route: Route) => Promise<void>) | undefined;
     if (testInfo.project.name === 'webkit') {
         delayListResponse = async (route) => {
             await new Promise((resolve) => setTimeout(resolve, 2000));
