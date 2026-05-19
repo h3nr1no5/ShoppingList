@@ -104,7 +104,8 @@ def get_client_ip(request: Request) -> str:
     return request.client.host or "127.0.0.1"
 
 
-limiter = Limiter(key_func=get_client_ip)
+RATELIMIT_ENABLED = os.getenv("RATELIMIT_ENABLED", "true").lower() != "false"
+limiter = Limiter(key_func=get_client_ip, enabled=RATELIMIT_ENABLED)
 app.state.limiter = limiter
 
 

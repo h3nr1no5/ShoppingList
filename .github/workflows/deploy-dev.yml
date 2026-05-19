@@ -132,6 +132,7 @@ jobs:
               "SECRET_KEY=$ACI_SECRET_KEY" \
               "REGISTRATION_KEY=$ACI_REG_KEY" \
               "DATABASE_URL=$ACI_DATABASE_URL" \
+              "RATELIMIT_ENABLED=false" \
             --os-type Linux \
             --ip-address Public \
             --ports 8000 \
