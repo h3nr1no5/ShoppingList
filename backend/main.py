@@ -30,7 +30,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database import get_db, init_db, DATABASE_URL
+from database import get_db, init_db
 from models import User, ShoppingList, ListItem
 from schemas import (
     UserCreate,
@@ -461,123 +461,6 @@ async def delete_item(
     item, _ = await get_item_with_list_access(item_id, share_code, current_user, db)
     await delete_list_item(db, item)
     return MessageResponse(message="Item deleted successfully")
-
-
-# ==================== Admin/Migration Routes ====================
-
-
-@app.post("/api/admin/add-updated-at-column", tags=["admin"])
-async def add_updated_at_column(db: AsyncSession = Depends(get_db)):
-    """
-    Temporary endpoint to add updated_at column to list_items table.
-    This is a one-time migration endpoint and should be removed after use.
-    Protected by a simple secret check via MIGRATION_SECRET env var.
-    """
-    migration_secret = os.getenv("MIGRATION_SECRET")
-
-    if not migration_secret:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Migration endpoint not configured",
-        )
-
-    try:
-        # Add the column if it doesn't exist
-        await db.execute(text(
-            "ALTER TABLE list_items ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();"
-        ))
-        await db.commit()
-        return {"status": "success", "message": "Column added (or already exists)"}
-    except Exception as e:
-        await db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Migration failed: {str(e)}",
-        )
-
-
-@app.post("/api/admin/create-tables", tags=["admin"])
-async def create_tables_endpoint(db: AsyncSession = Depends(get_db)):
-    """
-    Safe table creation - only creates tables if they don't exist.
-    NO DATA IS DELETED.
-    Protected by MIGRATION_SECRET.
-    """
-    migration_secret = os.getenv("MIGRATION_SECRET")
-
-    if not migration_secret:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Migration endpoint not configured",
-        )
-
-    try:
-        from database import engine, Base
-        from models import User, ShoppingList, ListItem
-
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
-
-        return {"status": "success", "message": "Tables created (if they didn't exist)"}
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Table creation failed: {str(e)}",
-        )
-
-
-@app.get("/api/admin/debug-db", tags=["admin"])
-async def debug_db_endpoint(db: AsyncSession = Depends(get_db)):
-    """
-    Debug database connection - inspect what's in the database.
-    Protected by MIGRATION_SECRET.
-    """
-    migration_secret = os.getenv("MIGRATION_SECRET")
-
-    if not migration_secret:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Not configured",
-        )
-
-    try:
-        from database import DATABASE_URL
-
-        # Check tables in public schema
-        result = await db.execute(text(
-            "SELECT table_name FROM information_schema.tables WHERE table_schema='public' ORDER BY table_name"
-        ))
-        tables = [row[0] for row in result.fetchall()]
-
-        # Check user count if users table exists
-        user_count = None
-        if "users" in tables:
-            try:
-                result = await db.execute(text("SELECT COUNT(*) FROM users"))
-                user_count = result.scalar()
-            except Exception as e:
-                user_count = f"Error: {str(e)}"
-
-        # Check list count if shopping_lists table exists
-        list_count = None
-        if "shopping_lists" in tables:
-            try:
-                result = await db.execute(text("SELECT COUNT(*) FROM shopping_lists"))
-                list_count = result.scalar()
-            except Exception as e:
-                list_count = f"Error: {str(e)}"
-
-        return {
-            "tables": tables,
-            "user_count": user_count,
-            "list_count": list_count,
-            "database_url_starts_with": DATABASE_URL[:50],
-        }
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Debug query failed: {str(e)}",
-        )
 
 
 # ==================== Health Check ====================
