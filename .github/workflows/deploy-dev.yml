@@ -28,6 +28,9 @@ env:
 jobs:
   deploy-staging:
     runs-on: ubuntu-latest
+    outputs:
+      staging_url: ${{ steps.ip.outputs.staging_url }}
+      resource_group: ${{ steps.resource_group.outputs.resource_group }}
 
     steps:
       - uses: actions/checkout@v5
@@ -87,6 +90,7 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Get resource group
+        id: resource_group
         run: |
           RG=$(az group list --query "[?contains(name, '${{ vars.AZURE_ENV_NAME || 'shoppinglistprod' }}')].name" -o tsv | head -1)
           if [ -z "$RG" ]; then
@@ -97,8 +101,17 @@ jobs:
             exit 1
           fi
           echo "RESOURCE_GROUP=$RG" >> "$GITHUB_ENV"
+          echo "resource_group=$RG" >> "$GITHUB_OUTPUT"
 
       # ---- Spin Up ACI ----
+
+      - name: Ensure no stale container exists
+        run: |
+          az container delete \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --name "${{ env.ACI_NAME }}" \
+            --yes 2>/dev/null || true
+        if: github.event.action != 'closed'
 
       - name: Create staging container instance
         env:
@@ -138,6 +151,7 @@ jobs:
             if [ -n "$IP" ]; then
               echo "ACI_IP=$IP" >> "$GITHUB_ENV"
               echo "STAGING_URL=http://$IP:8000" >> "$GITHUB_ENV"
+              echo "staging_url=http://$IP:8000" >> "$GITHUB_OUTPUT"
               echo "Container IP: $IP"
               exit 0
             fi
@@ -181,11 +195,19 @@ jobs:
           python backend/smoke_test.py
         if: github.event.action != 'closed'
 
-      # ---- Playwright E2E Tests ----
+  e2e-tests:
+    needs: deploy-staging
+    if: success() && github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        shard: [1, 2]
+
+    steps:
+      - uses: actions/checkout@v5
 
       - name: Set up Node.js
         uses: actions/setup-node@v5
-        if: github.event.action != 'closed'
         with:
           node-version: "20"
           cache: "npm"
@@ -193,27 +215,24 @@ jobs:
 
       - name: Install frontend dependencies
         working-directory: frontend
-        if: github.event.action != 'closed'
         run: npm ci
 
       - name: Install Playwright browsers
         working-directory: frontend
-        if: github.event.action != 'closed'
         run: npx playwright install chromium
 
-      - name: Run Playwright E2E against staging
-        if: github.event.action != 'closed'
-        timeout-minutes: 10
+      - name: Run Playwright E2E against staging (shard ${{ matrix.shard }}/2)
+        timeout-minutes: 15
         working-directory: frontend
         env:
-          E2E_BASE_URL: "${{ env.STAGING_URL }}"
-          E2E_API_BASE_URL: "${{ env.STAGING_URL }}/api"
-          E2E_INVITE_CODE: "${{ secrets.REGISTRATION_KEY }}"
-          E2E_AUTH_FILE: ./e2e/.auth/deploy-user.json
+          E2E_BASE_URL: ${{ needs.deploy-staging.outputs.staging_url }}
+          E2E_API_BASE_URL: ${{ needs.deploy-staging.outputs.staging_url }}/api
+          E2E_INVITE_CODE: ${{ secrets.REGISTRATION_KEY }}
+          E2E_AUTH_FILE: ./e2e/.auth/deploy-user-${{ matrix.shard }}.json
         run: |
           for i in 1 2 3; do
-            if npx playwright test --config=playwright.deploy.config.ts; then
-              echo "Playwright E2E tests passed"
+            if npx playwright test --config=playwright.deploy.config.ts --shard=${{ matrix.shard }}/2; then
+              echo "Playwright E2E tests passed on attempt $i"
               exit 0
             fi
             echo "Playwright attempt $i failed, retrying in 15s..."
@@ -222,13 +241,25 @@ jobs:
           echo "Playwright E2E tests failed after 3 attempts"
           exit 1
 
-      # ---- Cleanup ----
+  cleanup:
+    if: always()
+    needs: [deploy-staging, e2e-tests]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Log in to Azure (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Cleanup ACI container
-        if: always()
         run: |
           echo "Cleaning up ACI container: ${{ env.ACI_NAME }}"
           az container delete \
-            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --resource-group "${{ needs.deploy-staging.outputs.resource_group }}" \
             --name "${{ env.ACI_NAME }}" \
             --yes || echo "Container already gone or cleanup failed (non-blocking)"
+
+      
