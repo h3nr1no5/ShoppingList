@@ -96,7 +96,7 @@ jobs:
               "SECRET_KEY=$ACI_SECRET_KEY" \
               "REGISTRATION_KEY=$ACI_REG_KEY" \
               "DATABASE_URL=$ACI_DATABASE_URL" \
-            --os-type Linux  
+            --os-type Linux \
             --ports 8000 \
             --restart-policy Never
 
