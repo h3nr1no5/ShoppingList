@@ -6,13 +6,28 @@ Thank you for your interest in contributing to the Shopping List App. This docum
 
 ### Pull Request Process
 
-1. **Fork the repository** and create a feature branch from `main`
+1. **Fork the repository** and create a feature branch from `dev`
 2. **Make your changes** following the code style guidelines below
 3. **Run tests locally** to ensure everything passes (see Testing Requirements)
-4. **Push your branch** and open a pull request against `main`
+4. **Push your branch** and open a pull request against `dev`
 5. **Respond to feedback** and make adjustments if requested
 
 Pull requests are merged after CI passes and at least one code review approval.
+Once merged to `dev`, a release PR from `dev` → `main` is created for production deployment.
+
+### Branching Model
+
+```
+feature/xxx  ──→  dev  ──→  main
+fix/xxx      ──→  dev  ──→  main
+                   ↑              ↑
+             staging ACI      production
+             (E2E+smoke)     (deploy+smoke)
+```
+
+- All feature and fix branches merge into `dev` first
+- `dev` gets ephemeral staging deployment via ACI (E2E + smoke tests)
+- Only stable releases are merged from `dev` → `main`, which triggers production deploy
 
 ### Development Setup
 
@@ -205,6 +220,8 @@ cd frontend && npx playwright test
 
 E2E tests are located in `frontend/e2e/` and run automatically in CI on PRs to `main` and `dev` branches.
 
+After merging to `dev`, an ephemeral staging deployment via Azure Container Instances runs the full E2E suite (`playwright.deploy.config.ts`) plus smoke tests against the staging instance.
+
 ### Smoke Tests
 
 Post-deployment smoke tests in `backend/smoke_test.py` verify the API surface:
@@ -285,18 +302,21 @@ Avoid generic names like `fix1` or `my-changes`.
    - Backend: pytest passes with all tests
    - Frontend: lint and tests pass
    - Frontend: build completes successfully
+   - Frontend: Playwright E2E tests pass (on PRs to `main` and `dev`)
 
-2. **Code review** — A maintainer will review your changes and check for:
+2. **Staging deployment** — Push to `dev` triggers an ephemeral staging deploy via Azure Container Instances with full E2E and smoke test validation.
+
+3. **Code review** — A maintainer will review your changes and check for:
    - Correctness and completeness
    - Code style consistency
    - Test coverage for new features
    - Security considerations
 
 3. **Feedback** — Reviewers may request:
-   - Additional tests
-   - Code improvements
-   - Documentation updates
-   - Clarifications
+    - Additional tests
+    - Code improvements
+    - Documentation updates
+    - Clarifications
 
 ### How to Get Your PR Reviewed Quickly
 
@@ -305,6 +325,7 @@ Avoid generic names like `fix1` or `my-changes`.
 - Include context about what changed and why
 - Respond to feedback promptly
 - Push additional commits to address issues
+- Ensure CI passes (unit tests, E2E on PR to `dev` or `main`)
 
 ## Reporting Issues
 
@@ -338,6 +359,7 @@ For security vulnerabilities, do not open a public issue. Instead, contact the m
 - [AGENTS.md](./AGENTS.md) — Development commands
 - [DEPLOYMENT.md](./DEPLOYMENT.md) — Azure deployment guide
 - GitHub Actions: [.github/workflows/test.yml](./.github/workflows/test.yml)
+- Staging deploy: [.github/workflows/deploy-dev.yml](./.github/workflows/deploy-dev.yml)
 
 ## Questions?
 
