@@ -80,6 +80,9 @@ if [ -z "${E2E_INVITE_CODE:-}" ]; then
     fi
 fi
 export E2E_INVITE_CODE
+export REGISTER_RATE_LIMIT="100/minute"
+export LOGIN_RATE_LIMIT="200/minute"
+export SHARED_LIST_RATE_LIMIT="500/minute"
 
 # ============================================================================
 # Ensure SECRET_KEY in backend/.env

@@ -16,6 +16,11 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 
+# Rate limiting configuration — overridable via env vars
+REGISTER_RATE_LIMIT = os.getenv("REGISTER_RATE_LIMIT", "5/minute")
+LOGIN_RATE_LIMIT = os.getenv("LOGIN_RATE_LIMIT", "10/minute")
+SHARED_LIST_RATE_LIMIT = os.getenv("SHARED_LIST_RATE_LIMIT", "30/minute")
+
 
 logger = logging.getLogger(__name__)
 
@@ -192,7 +197,7 @@ async def get_item_with_list_access(
 
 
 @app.post("/api/auth/register", response_model=TokenResponse, tags=["auth"])
-@limiter.limit("5/minute")
+@limiter.limit(REGISTER_RATE_LIMIT)
 async def register(
     request: Request,
     user_data: UserCreate,
@@ -223,7 +228,7 @@ async def register(
 
 
 @app.post("/api/auth/login", response_model=TokenResponse, tags=["auth"])
-@limiter.limit("10/minute")
+@limiter.limit(LOGIN_RATE_LIMIT)
 async def login(
     request: Request,
     form_data: OAuth2PasswordRequestForm = Depends(),
@@ -394,7 +399,7 @@ async def create_share_link(
     response_model=ShoppingListWithItemsResponse,
     tags=["lists"],
 )
-@limiter.limit("30/minute")
+@limiter.limit(SHARED_LIST_RATE_LIMIT)
 async def get_shared_list(
     request: Request,
     share_code: uuid.UUID,
