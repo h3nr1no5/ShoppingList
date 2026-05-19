@@ -11,6 +11,11 @@ on:
   workflow_dispatch:
     # Allow manual trigger for ad-hoc staging deploys
 
+permissions:
+  id-token: write
+  contents: read
+  packages: write
+
 concurrency:
   group: staging-deploy
   cancel-in-progress: true
