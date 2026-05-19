@@ -10,6 +10,8 @@ from httpx import AsyncClient
 from auth import create_access_token, SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
 
 
+@pytest.mark.security
+@pytest.mark.postgresql
 class TestTokenValidation:
     """Tests for JWT token validation security."""
 
@@ -100,6 +102,8 @@ class TestTokenValidation:
         assert response.status_code == 401
 
 
+@pytest.mark.security
+@pytest.mark.postgresql
 class TestPasswordSecurity:
     """Tests for password hashing security."""
 
@@ -115,6 +119,8 @@ class TestPasswordSecurity:
         assert hashed.startswith("$2")  # bcrypt hashes start with $2a, $2b, or $2y
 
 
+@pytest.mark.security
+@pytest.mark.postgresql
 class TestAuthorizationEdgeCases:
     """Tests for authorization edge cases."""
 
@@ -162,6 +168,8 @@ class TestAuthorizationEdgeCases:
         assert response.json()["name"] == "<script>alert('xss')</script>"
 
 
+@pytest.mark.security
+@pytest.mark.postgresql
 class TestTokenExpiry:
     """Tests for token expiry configuration."""
 

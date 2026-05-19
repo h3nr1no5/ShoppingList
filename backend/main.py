@@ -30,7 +30,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database import get_db, init_db, DATABASE_URL, AsyncSessionLocal
+from database import get_db, init_db, DATABASE_URL
 from models import User, ShoppingList, ListItem
 from schemas import (
     UserCreate,
@@ -584,7 +584,7 @@ async def debug_db_endpoint(db: AsyncSession = Depends(get_db)):
 
 
 @app.get("/health", tags=["health"])
-async def health_check():
+async def health_check(db: AsyncSession = Depends(get_db)):
     """
     Readiness health check endpoint.
     Returns 200 only if the application and database are reachable.
@@ -592,9 +592,8 @@ async def health_check():
     """
     db_ok = False
     try:
-        async with AsyncSessionLocal() as session:
-            await session.execute(text("SELECT 1"))
-            db_ok = True
+        await db.execute(text("SELECT 1"))
+        db_ok = True
     except Exception as e:
         logger.warning("Health check DB probe failed: %s", e)
 

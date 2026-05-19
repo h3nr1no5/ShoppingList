@@ -8,6 +8,7 @@ from jose import jwt
 from auth import get_password_hash, verify_password, create_access_token, ALGORITHM, SECRET_KEY
 
 
+@pytest.mark.unit
 class TestPasswordHashing:
     """Tests for password hashing and verification."""
 
@@ -46,6 +47,7 @@ class TestPasswordHashing:
         assert verify_password("TestPassword123!", hashed2) is False
 
 
+@pytest.mark.unit
 class TestCreateAccessToken:
     """Tests for JWT token creation."""
 

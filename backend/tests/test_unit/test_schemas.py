@@ -26,6 +26,7 @@ from schemas import (
 )
 
 
+@pytest.mark.unit
 class TestUserCreate:
     def test_valid_user_create(self):
         data = UserCreate(email="test@example.com", password="password123", invite_code=os.environ["REGISTRATION_KEY"])
@@ -54,6 +55,7 @@ class TestUserCreate:
             UserCreate(email="test@example.com", invite_code=os.environ["REGISTRATION_KEY"])
 
 
+@pytest.mark.unit
 class TestUserLogin:
     def test_valid_user_login(self):
         data = UserLogin(email="test@example.com", password="password123")
@@ -65,6 +67,7 @@ class TestUserLogin:
             UserLogin(email="not-an-email", password="password123")
 
 
+@pytest.mark.unit
 class TestTokenResponse:
     def test_default_token_type(self):
         data = TokenResponse(access_token="test-token")
@@ -76,6 +79,7 @@ class TestTokenResponse:
         assert data.token_type == "custom"
 
 
+@pytest.mark.unit
 class TestTokenData:
     def test_with_user_id(self):
         user_id = uuid.uuid4()
@@ -87,6 +91,7 @@ class TestTokenData:
         assert data.user_id is None
 
 
+@pytest.mark.unit
 class TestShoppingListCreate:
     def test_valid_create(self):
         data = ShoppingListCreate(name="Groceries")
@@ -97,6 +102,7 @@ class TestShoppingListCreate:
             ShoppingListCreate()
 
 
+@pytest.mark.unit
 class TestShoppingListUpdate:
     def test_update_name(self):
         data = ShoppingListUpdate(name="New Name")
@@ -111,6 +117,7 @@ class TestShoppingListUpdate:
         assert data.name is None
 
 
+@pytest.mark.unit
 class TestShoppingListResponse:
     def test_valid_response(self):
         now = datetime.now(timezone.utc)
@@ -139,6 +146,7 @@ class TestShoppingListResponse:
         assert data.name == "Test"
 
 
+@pytest.mark.unit
 class TestShoppingListWithItemsResponse:
     def test_with_empty_items(self):
         now = datetime.now(timezone.utc)
@@ -178,6 +186,7 @@ class TestShoppingListWithItemsResponse:
         assert data.items[0].name == "Milk"
 
 
+@pytest.mark.unit
 class TestShareCodeResponse:
     def test_valid_share_code(self):
         code = uuid.uuid4()
@@ -185,6 +194,7 @@ class TestShareCodeResponse:
         assert data.share_code == code
 
 
+@pytest.mark.unit
 class TestListItemCreate:
     def test_valid_create(self):
         data = ListItemCreate(name="Milk")
@@ -205,6 +215,7 @@ class TestListItemCreate:
             ListItemCreate()
 
 
+@pytest.mark.unit
 class TestListItemUpdate:
     def test_update_name(self):
         data = ListItemUpdate(name="New Name")
@@ -236,6 +247,7 @@ class TestListItemUpdate:
         assert data.is_checked is True
 
 
+@pytest.mark.unit
 class TestListItemResponse:
     def test_valid_response(self):
         now = datetime.now(timezone.utc)
@@ -253,12 +265,14 @@ class TestListItemResponse:
         assert data.list_id == list_id
 
 
+@pytest.mark.unit
 class TestErrorResponse:
     def test_valid_error(self):
         data = ErrorResponse(detail="Something went wrong")
         assert data.detail == "Something went wrong"
 
 
+@pytest.mark.unit
 class TestMessageResponse:
     def test_valid_message(self):
         data = MessageResponse(message="Success")
