@@ -27,8 +27,8 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.types import Scope
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.requests import Request
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
+from slowapi import Limiter
+from slowapi.errors import RateLimitExceeded
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -93,9 +93,31 @@ app.add_middleware(
 )
 
 # Rate limiting setup
-limiter = Limiter(key_func=get_remote_address)
+def get_client_ip(request: Request) -> str:
+    """Extract real client IP from X-Forwarded-For (set by Azure Container Apps).
+    Falls back to request.client.host if header is absent."""
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        # X-Forwarded-For can contain multiple IPs: client, proxy1, proxy2
+        # The leftmost is the original client
+        return forwarded.split(",")[0].strip()
+    return request.client.host or "127.0.0.1"
+
+
+limiter = Limiter(key_func=get_client_ip)
 app.state.limiter = limiter
-app.add_exception_handler(429, _rate_limit_exceeded_handler)
+
+
+async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    """Custom 429 handler with Retry-After header."""
+    return JSONResponse(
+        status_code=429,
+        content={"detail": "Rate limit exceeded. Please try again later."},
+        headers={"Retry-After": "60"},
+    )
+
+
+app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
 
 
 # ==================== Dependency Functions ====================
@@ -371,7 +393,9 @@ async def create_share_link(
     response_model=ShoppingListWithItemsResponse,
     tags=["lists"],
 )
+@limiter.limit("30/minute")
 async def get_shared_list(
+    request: Request,
     share_code: uuid.UUID,
     db: AsyncSession = Depends(get_db),
 ):
