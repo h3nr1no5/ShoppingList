@@ -11,7 +11,7 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # Install runtime system dependencies (psql for health checks)
-RUN apt-get update && apt-get install -y postgresql-client && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y postgresql-client && apt-get upgrade -y && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
 COPY backend/requirements.txt .
