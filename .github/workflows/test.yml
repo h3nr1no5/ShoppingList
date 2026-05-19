@@ -9,7 +9,37 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  backend-test:
+  backend-unit:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    # NO postgres service — unit tests don't need DB
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Create virtual environment
+        run: python -m venv venv
+
+      - name: Install dependencies
+        run: |
+          source venv/bin/activate
+          pip install -r requirements.txt
+
+      - name: Run unit tests
+        run: |
+          source venv/bin/activate
+          pytest -v -m "unit and not postgresql"
+        env:
+          SECRET_KEY: test-secret-key-for-ci
+          REGISTRATION_KEY: test-registration-key
+
+  backend-integration:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -44,10 +74,10 @@ jobs:
           source venv/bin/activate
           pip install -r requirements.txt
 
-      - name: Run tests with PostgreSQL
+      - name: Run integration and security tests
         run: |
           source venv/bin/activate
-          pytest -v
+          pytest -v -m "postgresql"
         env:
           SECRET_KEY: test-secret-key-for-ci
           REGISTRATION_KEY: test-registration-key

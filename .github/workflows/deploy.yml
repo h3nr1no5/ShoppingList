@@ -61,7 +61,7 @@ jobs:
         working-directory: backend
         run: |
           source venv/bin/activate
-          pytest -v
+          pytest -v -m "postgresql"
         env:
           SECRET_KEY: test-secret-key-for-ci
           REGISTRATION_KEY: test-registration-key
@@ -80,6 +80,12 @@ jobs:
       - name: Run linter
         working-directory: frontend
         run: npm run lint
+
+      - name: Run frontend tests
+        working-directory: frontend
+        run: npm run test:run
+        env:
+          VITE_API_URL: ""
 
       - name: Build frontend
         working-directory: frontend
@@ -239,6 +245,36 @@ jobs:
             sleep 15
           done
           echo "Smoke tests failed after 3 attempts"
+          exit 1
+
+      - name: Set up Node.js for E2E
+        uses: actions/setup-node@v5
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Playwright browsers
+        working-directory: frontend
+        run: npx playwright install chromium
+
+      - name: Run Playwright E2E against deployment
+        working-directory: frontend
+        env:
+          E2E_BASE_URL: "${{ env.APP_URL }}"
+          E2E_API_BASE_URL: "${{ env.APP_URL }}/api"
+          E2E_INVITE_CODE: "${{ secrets.REGISTRATION_KEY }}"
+          E2E_AUTH_FILE: ./e2e/.auth/deploy-user.json
+        run: |
+          for i in 1 2 3; do
+            if npx playwright test --config=playwright.deploy.config.ts; then
+              echo "Playwright E2E tests passed"
+              exit 0
+            fi
+            echo "Playwright attempt $i failed, retrying in 15s..."
+            sleep 15
+          done
+          echo "Playwright E2E tests failed after 3 attempts"
           exit 1
 
       - name: Rollback on failure

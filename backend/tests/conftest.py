@@ -40,13 +40,16 @@ TestSessionLocal = async_sessionmaker(
 
 # Create tables for each test
 @pytest.fixture(autouse=True)
-async def setup_database():
-    """Create all tables before test and drop after."""
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    yield
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
+async def setup_database(request):
+    """Create all tables before test and drop after, only if test needs PostgreSQL."""
+    if request.node.get_closest_marker("postgresql"):
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        yield
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.drop_all)
+    else:
+        yield
 
 # Each test gets its own session (no transaction wrapper - we commit data)
 @pytest.fixture
