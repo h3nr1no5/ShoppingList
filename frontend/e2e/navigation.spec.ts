@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures';
+import type { Route } from '@playwright/test';
 
 test.describe('Navigation and routing', () => {
   test('redirects unauthenticated user to login', async ({ browser }) => {
@@ -22,14 +23,23 @@ test.describe('Navigation and routing', () => {
   });
 
   test('shows loading state while fetching list', async ({ authedPage }) => {
+    // Delay the API response to ensure the loading state renders before the request
+    // completes. Without this, the entire auth→loading→API lifecycle can finish
+    // before Playwright's first DOM check, making the loading state unobservable.
+    const delayListResponse = async (route: Route) => {
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        await route.continue();
+    };
+    await authedPage.route('**/api/lists/**', delayListResponse);
+
     await authedPage.goto('/lists/00000000-0000-0000-0000-000000000000');
 
-    // Should show loading or error state.
-    // Use retry assertion for CI reliability (especially WebKit on slow runners).
     await expect(async () => {
         const text = await authedPage.locator('body').textContent();
         expect(text).toMatch(/Loading|couldn/i);
     }).toPass({ timeout: 10000 });
+
+    await authedPage.unroute('**/api/lists/**', delayListResponse);
   });
 
   test('shows error message for invalid list id', async ({ authedPage }) => {
