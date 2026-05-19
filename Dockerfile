@@ -24,4 +24,5 @@ COPY backend/ .
 COPY --from=frontend-builder /app/frontend/dist /app/static
 
 EXPOSE 8000
+USER nobody
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
