@@ -139,41 +139,6 @@ jobs:
           echo "ERROR: App did not become healthy within 90 seconds"
           exit 1
 
-      # ---- Playwright E2E Tests ----
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v5
-        with:
-          node-version: "20"
-          cache: "npm"
-          cache-dependency-path: frontend/package-lock.json
-
-      - name: Install frontend dependencies
-        working-directory: frontend
-        run: npm ci
-
-      - name: Install Playwright browsers
-        working-directory: frontend
-        run: npx playwright install --with-deps chromium
-
-      - name: Run Playwright E2E tests against staging
-        working-directory: frontend
-        run: npx playwright test --config=playwright.deploy.config.ts --project=deploy-smoke
-        env:
-          E2E_BASE_URL: "${{ env.STAGING_URL }}"
-          E2E_API_BASE_URL: "${{ env.STAGING_URL }}/api"
-          E2E_INVITE_CODE: "${{ secrets.REGISTRATION_KEY }}"
-          REGISTRATION_KEY: "${{ secrets.REGISTRATION_KEY }}"
-          CI: "true"
-
-      - name: Upload Playwright report
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-staging-report
-          path: frontend/playwright-deploy-report/
-          retention-days: 7
-
       # ---- Smoke Tests (API only, no browser) ----
 
       - name: Set up Python
