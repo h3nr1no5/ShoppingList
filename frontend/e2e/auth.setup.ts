@@ -1,6 +1,8 @@
 import { test as setup } from '@playwright/test';
 import { registerUser } from './helpers/api';
 import { TEST_USER_EMAIL, TEST_USER_PASSWORD, API_BASE_URL } from './helpers/config';
+import { writeFileSync, mkdirSync } from 'fs';
+import { dirname } from 'path';
 
 const authFile = process.env.E2E_AUTH_FILE || './e2e/.auth/user.json';
 const BASE_ORIGIN = process.env.E2E_BASE_URL || 'http://localhost:5173';
@@ -31,18 +33,16 @@ setup('authenticate as test user', async ({ request }) => {
   const token = body.access_token as string;
 
   // Save storage state with the token in localStorage
-  await setup.storageState({
-    path: authFile,
-    state: {
-      origins: [
-        {
-          origin: BASE_ORIGIN,
-          localStorage: [
-            { name: 'token', value: token },
-          ],
-        },
-      ],
-      cookies: [],
-    },
-  });
+  mkdirSync(dirname(authFile), { recursive: true });
+  writeFileSync(authFile, JSON.stringify({
+    origins: [
+      {
+        origin: BASE_ORIGIN,
+        localStorage: [
+          { name: 'token', value: token },
+        ],
+      },
+    ],
+    cookies: [],
+  }));
 });

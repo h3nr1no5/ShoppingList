@@ -28,6 +28,9 @@ env:
 jobs:
   deploy-staging:
     runs-on: ubuntu-latest
+    outputs:
+      staging_url: ${{ steps.ip.outputs.staging_url }}
+      resource_group: ${{ steps.resource_group.outputs.resource_group }}
 
     steps:
       - uses: actions/checkout@v5
@@ -77,6 +80,7 @@ jobs:
         if: github.event.action != 'closed'
 
       # ---- Azure Login & Resource Discovery ----
+      # NOTE: Runs on PR close too — cleanup step needs RESOURCE_GROUP
 
       - name: Log in to Azure (OIDC)
         uses: azure/login@v2
@@ -86,6 +90,7 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Get resource group
+        id: resource_group
         run: |
           RG=$(az group list --query "[?contains(name, '${{ vars.AZURE_ENV_NAME || 'shoppinglistprod' }}')].name" -o tsv | head -1)
           if [ -z "$RG" ]; then
@@ -96,14 +101,24 @@ jobs:
             exit 1
           fi
           echo "RESOURCE_GROUP=$RG" >> "$GITHUB_ENV"
+          echo "resource_group=$RG" >> "$GITHUB_OUTPUT"
 
       # ---- Spin Up ACI ----
+
+      - name: Ensure no stale container exists
+        run: |
+          az container delete \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --name "${{ env.ACI_NAME }}" \
+            --yes 2>/dev/null || true
+        if: github.event.action != 'closed'
 
       - name: Create staging container instance
         env:
           ACI_SECRET_KEY: "${{ secrets.SECRET_KEY }}"
           ACI_REG_KEY: "${{ secrets.REGISTRATION_KEY }}"
           ACI_DATABASE_URL: "${{ secrets.DATABASE_URL }}"
+          ACI_REGISTRY_PASSWORD: "${{ secrets.GHCR_PAT }}"
         run: |
           az container create \
             --resource-group "${{ env.RESOURCE_GROUP }}" \
@@ -112,7 +127,7 @@ jobs:
             --cpu 1 --memory 1.5 \
             --registry-login-server ghcr.io \
             --registry-username ${{ github.actor }} \
-            --registry-password ${{ secrets.GHCR_PAT }} \
+            --registry-password "$ACI_REGISTRY_PASSWORD" \
             --environment-variables \
               "SECRET_KEY=$ACI_SECRET_KEY" \
               "REGISTRATION_KEY=$ACI_REG_KEY" \
@@ -136,6 +151,7 @@ jobs:
             if [ -n "$IP" ]; then
               echo "ACI_IP=$IP" >> "$GITHUB_ENV"
               echo "STAGING_URL=http://$IP:8000" >> "$GITHUB_ENV"
+              echo "staging_url=http://$IP:8000" >> "$GITHUB_OUTPUT"
               echo "Container IP: $IP"
               exit 0
             fi
@@ -179,13 +195,71 @@ jobs:
           python backend/smoke_test.py
         if: github.event.action != 'closed'
 
-      # ---- Cleanup ----
+  e2e-tests:
+    needs: deploy-staging
+    if: success() && github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        shard: [1, 2]
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Install Playwright browsers
+        working-directory: frontend
+        run: npx playwright install chromium
+
+      - name: Run Playwright E2E against staging (shard ${{ matrix.shard }}/2)
+        timeout-minutes: 15
+        working-directory: frontend
+        env:
+          E2E_BASE_URL: ${{ needs.deploy-staging.outputs.staging_url }}
+          E2E_API_BASE_URL: ${{ needs.deploy-staging.outputs.staging_url }}/api
+          E2E_INVITE_CODE: ${{ secrets.REGISTRATION_KEY }}
+          E2E_AUTH_FILE: ./e2e/.auth/deploy-user-${{ matrix.shard }}.json
+        run: |
+          for i in 1 2 3; do
+            if npx playwright test --config=playwright.deploy.config.ts --shard=${{ matrix.shard }}/2; then
+              echo "Playwright E2E tests passed on attempt $i"
+              exit 0
+            fi
+            echo "Playwright attempt $i failed, retrying in 15s..."
+            sleep 15
+          done
+          echo "Playwright E2E tests failed after 3 attempts"
+          exit 1
+
+  cleanup:
+    if: always()
+    needs: [deploy-staging, e2e-tests]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Log in to Azure (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Cleanup ACI container
-        if: always()
         run: |
           echo "Cleaning up ACI container: ${{ env.ACI_NAME }}"
           az container delete \
-            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --resource-group "${{ needs.deploy-staging.outputs.resource_group }}" \
             --name "${{ env.ACI_NAME }}" \
             --yes || echo "Container already gone or cleanup failed (non-blocking)"
+
+      
