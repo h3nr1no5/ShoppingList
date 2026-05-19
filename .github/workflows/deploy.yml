@@ -129,6 +129,8 @@ jobs:
 
       - name: Push Docker image
         run: |
+          docker tag ghcr.io/${{ env.REPOSITORY_LOWER }}:${{ github.sha }} ghcr.io/${{ env.REPOSITORY_LOWER }}:main
+          docker tag ghcr.io/${{ env.REPOSITORY_LOWER }}:${{ github.sha }} ghcr.io/${{ env.REPOSITORY_LOWER }}:latest
           docker push ghcr.io/${{ env.REPOSITORY_LOWER }}:${{ github.sha }}
           docker push ghcr.io/${{ env.REPOSITORY_LOWER }}:main
           docker push ghcr.io/${{ env.REPOSITORY_LOWER }}:latest
