@@ -14,6 +14,8 @@ from crud import create_list_item, update_list_item, get_item_by_id
 from schemas import ListItemCreate, ShoppingListCreate
 
 
+@pytest.mark.unit
+@pytest.mark.postgresql
 class TestListItemModelUpdatedAt:
     """Tests for ListItem model updated_at field."""
 
@@ -48,6 +50,8 @@ class TestListItemModelUpdatedAt:
         assert item.updated_at.tzinfo is not None
 
 
+@pytest.mark.unit
+@pytest.mark.postgresql
 class TestListItemUpdatedAtOnUpdate:
     """Tests for updated_at auto-update on item changes."""
 
@@ -98,6 +102,7 @@ class TestListItemUpdatedAtOnUpdate:
         assert updated.updated_at > original_updated_at
 
 
+@pytest.mark.unit
 class TestListItemSchemaUpdatedAt:
     """Tests for ListItemResponse schema with updated_at."""
 

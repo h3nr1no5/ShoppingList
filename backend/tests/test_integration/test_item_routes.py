@@ -5,7 +5,11 @@ import asyncio
 import uuid
 from httpx import AsyncClient
 
+import pytest
 
+
+@pytest.mark.integration
+@pytest.mark.postgresql
 class TestGetItems:
     """Tests for GET /api/lists/{list_id}/items."""
 
@@ -29,6 +33,8 @@ class TestGetItems:
         assert response.status_code == 404
 
 
+@pytest.mark.integration
+@pytest.mark.postgresql
 class TestAddItem:
     """Tests for POST /api/lists/{list_id}/items."""
 
@@ -71,6 +77,8 @@ class TestAddItem:
         assert response.status_code == 404
 
 
+@pytest.mark.integration
+@pytest.mark.postgresql
 class TestUpdateItem:
     """Tests for PUT /api/items/{item_id}."""
 
@@ -121,6 +129,8 @@ class TestUpdateItem:
         assert response.status_code == 404
 
 
+@pytest.mark.integration
+@pytest.mark.postgresql
 class TestDeleteItem:
     """Tests for DELETE /api/items/{item_id}."""
 
@@ -136,6 +146,8 @@ class TestDeleteItem:
         assert response.status_code == 404
 
 
+@pytest.mark.integration
+@pytest.mark.postgresql
 class TestItemUpdatedAt:
     """Tests for item updated_at field in API responses."""
 

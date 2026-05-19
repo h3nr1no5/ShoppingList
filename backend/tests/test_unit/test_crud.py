@@ -28,6 +28,8 @@ from crud import (
 )
 
 
+@pytest.mark.unit
+@pytest.mark.postgresql
 class TestUserCrud:
     """Tests for user CRUD operations."""
 
@@ -84,6 +86,8 @@ class TestUserCrud:
         assert user is None
 
 
+@pytest.mark.unit
+@pytest.mark.postgresql
 class TestShoppingListCrud:
     """Tests for shopping list CRUD operations."""
 
@@ -170,6 +174,8 @@ class TestShoppingListCrud:
         assert updated.share_code != old_code
 
 
+@pytest.mark.unit
+@pytest.mark.postgresql
 class TestListItemCrud:
     """Tests for list item CRUD operations."""
 

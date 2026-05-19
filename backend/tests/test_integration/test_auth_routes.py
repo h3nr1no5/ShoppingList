@@ -4,7 +4,11 @@ Integration tests for authentication routes.
 import os
 from httpx import AsyncClient
 
+import pytest
 
+
+@pytest.mark.integration
+@pytest.mark.postgresql
 class TestRegister:
     """Tests for POST /api/auth/register."""
 
@@ -72,6 +76,8 @@ class TestRegister:
         assert response.status_code == 400
 
 
+@pytest.mark.integration
+@pytest.mark.postgresql
 class TestLogin:
     """Tests for POST /api/auth/login."""
 

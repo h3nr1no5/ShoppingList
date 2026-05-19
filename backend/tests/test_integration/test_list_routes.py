@@ -4,7 +4,11 @@ Integration tests for shopping list routes.
 import uuid
 from httpx import AsyncClient
 
+import pytest
 
+
+@pytest.mark.integration
+@pytest.mark.postgresql
 class TestHealthCheck:
     """Tests for GET /health."""
 
@@ -15,6 +19,8 @@ class TestHealthCheck:
         assert response.json() == {"status": "healthy", "database": "ok"}
 
 
+@pytest.mark.integration
+@pytest.mark.postgresql
 class TestGetLists:
     """Tests for GET /api/lists."""
 
@@ -38,6 +44,8 @@ class TestGetLists:
         assert response.json() == []
 
 
+@pytest.mark.integration
+@pytest.mark.postgresql
 class TestCreateList:
     """Tests for POST /api/lists."""
 
@@ -63,6 +71,8 @@ class TestCreateList:
         assert response.status_code == 422
 
 
+@pytest.mark.integration
+@pytest.mark.postgresql
 class TestGetList:
     """Tests for GET /api/lists/{list_id}."""
 
@@ -81,6 +91,8 @@ class TestGetList:
         assert response.status_code == 404
 
 
+@pytest.mark.integration
+@pytest.mark.postgresql
 class TestUpdateList:
     """Tests for PUT /api/lists/{list_id}."""
 
@@ -103,6 +115,8 @@ class TestUpdateList:
         assert response.json()["name"] == "New Name"
 
 
+@pytest.mark.integration
+@pytest.mark.postgresql
 class TestDeleteList:
     """Tests for DELETE /api/lists/{list_id}."""
 
@@ -132,6 +146,8 @@ class TestDeleteList:
         assert response.status_code == 404
 
 
+@pytest.mark.integration
+@pytest.mark.postgresql
 class TestShareLink:
     """Tests for POST /api/lists/{list_id}/share."""
 
@@ -149,6 +165,8 @@ class TestShareLink:
         assert data["share_code"] is not None
 
 
+@pytest.mark.integration
+@pytest.mark.postgresql
 class TestSharedList:
     """Tests for GET /api/lists/shared/{share_code}."""
 

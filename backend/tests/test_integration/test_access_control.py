@@ -4,9 +4,13 @@ Integration tests for access control on shopping lists.
 import uuid
 from httpx import AsyncClient
 
+import pytest
+
 from models import ShoppingList
 
 
+@pytest.mark.integration
+@pytest.mark.postgresql
 class TestOwnerAccess:
     """Tests for owner access patterns."""
 
@@ -50,6 +54,8 @@ class TestOwnerAccess:
         assert response.status_code == 403
 
 
+@pytest.mark.integration
+@pytest.mark.postgresql
 class TestShareCodeAccess:
     """Tests for share code access patterns."""
 
@@ -158,6 +164,8 @@ class TestShareCodeAccess:
         assert response.status_code == 401
 
 
+@pytest.mark.integration
+@pytest.mark.postgresql
 class TestPrivateListAccess:
     """Tests for private list access denial."""
 
@@ -180,6 +188,8 @@ class TestPrivateListAccess:
         assert response.status_code == 401
 
 
+@pytest.mark.integration
+@pytest.mark.postgresql
 class TestAnonymousListAccess:
     """Tests for lists with no owner."""
 
