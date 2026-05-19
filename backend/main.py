@@ -26,6 +26,9 @@ from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.types import Scope
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.requests import Request
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -88,6 +91,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Rate limiting setup
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(429, _rate_limit_exceeded_handler)
 
 
 # ==================== Dependency Functions ====================
@@ -161,7 +169,9 @@ async def get_item_with_list_access(
 
 
 @app.post("/api/auth/register", response_model=TokenResponse, tags=["auth"])
+@limiter.limit("5/minute")
 async def register(
+    request: Request,
     user_data: UserCreate,
     db: AsyncSession = Depends(get_db),
 ):
@@ -190,7 +200,9 @@ async def register(
 
 
 @app.post("/api/auth/login", response_model=TokenResponse, tags=["auth"])
+@limiter.limit("10/minute")
 async def login(
+    request: Request,
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: AsyncSession = Depends(get_db),
 ):
