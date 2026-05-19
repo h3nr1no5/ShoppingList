@@ -1,0 +1,189 @@
+name: Deploy to Staging (ACI)
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+      - 'Dockerfile'
+      - '.github/workflows/deploy-dev.yml'
+  workflow_dispatch:
+    # Allow manual trigger for ad-hoc staging deploys
+
+concurrency:
+  group: staging-deploy
+  cancel-in-progress: true
+
+env:
+  ACI_NAME: shoppinglist-staging-${{ github.run_id }}
+  RESOURCE_GROUP: ""
+
+jobs:
+  deploy-staging:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      # ---- Build & Push ----
+
+      - name: Log in to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_PAT }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set lowercase repository name
+        run: echo "REPOSITORY_LOWER=${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ghcr.io/${{ env.REPOSITORY_LOWER }}:dev-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # ---- Azure Login & Resource Discovery ----
+
+      - name: Log in to Azure (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Get resource group
+        run: |
+          RG=$(az group list --query "[?contains(name, '${{ vars.AZURE_ENV_NAME || 'shoppinglistprod' }}')].name" -o tsv | head -1)
+          if [ -z "$RG" ]; then
+            RG=$(az group list --query '[0].name' -o tsv 2>/dev/null || echo "")
+          fi
+          if [ -z "$RG" ]; then
+            echo "ERROR: Could not determine resource group"
+            exit 1
+          fi
+          echo "RESOURCE_GROUP=$RG" >> "$GITHUB_ENV"
+
+      # ---- Spin Up ACI ----
+
+      - name: Create staging container instance
+        run: |
+          az container create \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --name "${{ env.ACI_NAME }}" \
+            --image "ghcr.io/${{ env.REPOSITORY_LOWER }}:dev-${{ github.sha }}" \
+            --cpu 1 --memory 1.5 \
+            --registry-login-server ghcr.io \
+            --registry-username ${{ github.actor }} \
+            --registry-password ${{ secrets.GHCR_PAT }} \
+            --environment-variables \
+              "SECRET_KEY=${{ secrets.SECRET_KEY }}" \
+              "REGISTRATION_KEY=${{ secrets.REGISTRATION_KEY }}" \
+              "DATABASE_URL=${{ secrets.DATABASE_URL }}" \
+            --ports 8000 \
+            --restart-policy Never
+
+          echo "ACI created: ${{ env.ACI_NAME }}"
+
+      - name: Wait for container IP
+        id: ip
+        run: |
+          for i in $(seq 1 20); do
+            IP=$(az container show \
+              --resource-group "${{ env.RESOURCE_GROUP }}" \
+              --name "${{ env.ACI_NAME }}" \
+              --query ipAddress.ip -o tsv 2>/dev/null)
+            if [ -n "$IP" ]; then
+              echo "ACI_IP=$IP" >> "$GITHUB_ENV"
+              echo "STAGING_URL=http://$IP:8000" >> "$GITHUB_ENV"
+              echo "Container IP: $IP"
+              exit 0
+            fi
+            echo "Waiting for IP (attempt $i/20)..."
+            sleep 5
+          done
+          echo "ERROR: Failed to get ACI IP after 20 attempts"
+          exit 1
+
+      # ---- Health Check ----
+
+      - name: Wait for app to be healthy
+        run: |
+          for i in $(seq 1 30); do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ env.STAGING_URL }}/health")
+            if [ "$STATUS" = "200" ]; then
+              echo "App is healthy at ${{ env.STAGING_URL }}"
+              exit 0
+            fi
+            echo "Attempt $i/30: Health check returned $STATUS, waiting..."
+            sleep 3
+          done
+          echo "ERROR: App did not become healthy within 90 seconds"
+          exit 1
+
+      # ---- Playwright E2E Tests ----
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Install Playwright browsers
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Playwright E2E tests against staging
+        working-directory: frontend
+        run: npx playwright test --config=playwright.deploy.config.ts --project=deploy-smoke
+        env:
+          E2E_BASE_URL: "${{ env.STAGING_URL }}"
+          E2E_API_BASE_URL: "${{ env.STAGING_URL }}/api"
+          E2E_INVITE_CODE: "${{ secrets.REGISTRATION_KEY }}"
+          REGISTRATION_KEY: "${{ secrets.REGISTRATION_KEY }}"
+          CI: "true"
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-staging-report
+          path: frontend/playwright-deploy-report/
+          retention-days: 7
+
+      # ---- Smoke Tests (API only, no browser) ----
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run smoke tests against staging
+        env:
+          SMOKE_BASE_URL: "${{ env.STAGING_URL }}"
+          SMOKE_REGISTRATION_KEY: "${{ secrets.REGISTRATION_KEY }}"
+        run: |
+          python backend/smoke_test.py
+
+      # ---- Cleanup ----
+
+      - name: Cleanup ACI container
+        if: always()
+        run: |
+          echo "Cleaning up ACI container: ${{ env.ACI_NAME }}"
+          az container delete \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --name "${{ env.ACI_NAME }}" \
+            --yes || echo "Container already gone or cleanup failed (non-blocking)"
