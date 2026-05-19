@@ -131,6 +131,9 @@ jobs:
   frontend-e2e:
     if: github.base_ref == 'main' || github.base_ref == 'dev'
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        shard: [1, 2, 3]
     defaults:
       run:
         working-directory: frontend
@@ -174,7 +177,8 @@ jobs:
         run: npm ci
 
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps
+        # --no-install: use local playwright from node_modules after npm ci, avoid npx cache
+        run: npx --no-install playwright install --with-deps
 
       - name: Start backend server
         working-directory: backend
@@ -193,16 +197,18 @@ jobs:
           SECRET_KEY: ci-secret-key-for-e2e-tests
           REGISTRATION_KEY: ci-reg-key-for-e2e-tests
 
-      - name: Run Playwright E2E tests
-        run: npx playwright test
+      - name: Run Playwright E2E tests (shard ${{ matrix.shard }}/3)
+        # --no-install: use local playwright from node_modules after npm ci, avoid npx cache
+        run: npx --no-install playwright test --shard=${{ matrix.shard }}/3
         env:
           E2E_INVITE_CODE: ci-reg-key-for-e2e-tests
           REGISTRATION_KEY: ci-reg-key-for-e2e-tests
+          E2E_AUTH_FILE: ./e2e/.auth/user-${{ matrix.shard }}.json
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v7
         if: failure()
         with:
-          name: playwright-report
+          name: playwright-report-shard-${{ matrix.shard }}
           path: frontend/playwright-report/
           retention-days: 7
