@@ -2,7 +2,7 @@
 description: Researches approaches, explores the codebase, and gathers context or best practices.
 mode: subagent
 model: opencode/big-pickle
-temperature: 0.25
+temperature: 0.2
 tools:
   read: true
   list: true

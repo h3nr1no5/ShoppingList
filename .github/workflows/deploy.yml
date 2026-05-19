@@ -156,8 +156,7 @@ jobs:
 
           CONTAINER_APP_NAME="shoppinglist-app"
           # Verify the container app exists
-          az containerapp show --name "$CONTAINER_APP_NAME" --resource-group "$RG" > /dev/null 2>&1
-          if [ $? -ne 0 ]; then
+          if ! az containerapp show --name "$CONTAINER_APP_NAME" --resource-group "$RG" > /dev/null 2>&1; then
             echo "ERROR: Container app '$CONTAINER_APP_NAME' not found in resource group $RG"
             exit 1
           fi

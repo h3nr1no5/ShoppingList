@@ -54,7 +54,7 @@ jobs:
             echo "ERROR: Container app '$APP_NAME' not found in resource group $RG"
             exit 1
           fi
-          echo "APP_URL=https://$APP_URL" >> $GITHUB_ENV
+          echo "APP_URL=https://$APP_URL" >> "$GITHUB_ENV"
 
       - name: Verify deployment URL is set
         run: |

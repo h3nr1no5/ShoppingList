@@ -9,7 +9,7 @@ interface ToastContainerProps {
 }
 
 function getToastIcon(type: 'success' | 'error' | 'warning'): string {
-  return type === 'success' ? '✓' : type === 'error' ? '✗' : '⚠';
+  return type === 'success' ? '✓' : type === 'warning' ? '⚠' : '';
 }
 
 export function ToastContainer({ toasts, dismissToast }: ToastContainerProps) {
