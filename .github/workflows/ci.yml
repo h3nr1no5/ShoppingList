@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # Checkout the repository to access workflow files
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       # Run actionlint to validate all .github/workflows/*.yml files
       # reviewdog/action-actionlint automatically detects and lints all workflow files
