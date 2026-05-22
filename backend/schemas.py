@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, EmailStr, ConfigDict, Field, field_validator
+from pydantic import BaseModel, EmailStr, ConfigDict, Field
 
 
 # ==================== Auth Schemas ====================
@@ -14,15 +14,8 @@ from pydantic import BaseModel, EmailStr, ConfigDict, Field, field_validator
 class UserCreate(BaseModel):
     """Schema for user registration."""
     email: EmailStr
-    password: str
+    password: str = Field(..., min_length=8, max_length=128)
     invite_code: Optional[str] = None
-    
-    @field_validator("password")
-    @classmethod
-    def validate_password(cls, v: str) -> str:
-        if len(v) < 8:
-            raise ValueError("Password must be at least 8 characters long")
-        return v
 
 
 class UserLogin(BaseModel):

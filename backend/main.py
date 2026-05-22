@@ -217,10 +217,18 @@ async def register(
     
     try:
         user = await create_user(db, user_data)
-    except ValueError:
+    except ValueError as e:
+        error_msg = str(e)
+        # Pass through known registration errors
+        if "Email already registered" in error_msg:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email already registered",
+            )
+        # For unknown errors (e.g. bcrypt issues), return a clear error
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="An error occurred during registration",
+            detail=error_msg,
         )
 
     access_token = create_access_token(user.id, user.email)

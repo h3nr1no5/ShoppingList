@@ -112,7 +112,7 @@ class TestPasswordSecurity:
         assert test_user.password_hash != "TestPassword123!"
         assert len(test_user.password_hash) > 50  # bcrypt hashes are long
 
-    def test_hash_is_bcrypt_format(self):
+    async def test_hash_is_bcrypt_format(self):
         """Password hash should be in bcrypt format."""
         from auth import get_password_hash
         hashed = get_password_hash("TestPassword123!")
