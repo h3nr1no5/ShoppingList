@@ -1,7 +1,7 @@
 ---
 description: Mandatory Security Advisor - performs security audits on all proposals, designs, and code implementations. Acts as a quality gate.
 mode: subagent
-model: opencode/qwen3.6-plus-free
+model: opencode/deepseek-v4-flash-free
 temperature: 0.05
 tools:
   read: true
