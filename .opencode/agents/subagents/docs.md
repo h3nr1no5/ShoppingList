@@ -1,7 +1,7 @@
 ---
 description: Creates and maintains documentation, comments, READMEs, and API docs.
 mode: subagent
-model: opencode/minimax-m2.5-free
+model: opencode/deepseek-v4-flash-free
 temperature: 0.3
 tools:
   read: true

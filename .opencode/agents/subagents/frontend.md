@@ -1,7 +1,7 @@
 ---
 description: Frontend development specialist focused on UI/UX, React/Vue/Svelte/Angular, styling, accessibility, performance, and responsive design.
 mode: subagent
-model: opencode/minimax-m2.5-free
+model: opencode/deepseek-v4-flash-free
 temperature: 0.25
 tools:
   read: true

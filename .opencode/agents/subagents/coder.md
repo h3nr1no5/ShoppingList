@@ -1,7 +1,7 @@
 ---
 description: Specialized coding agent that writes, edits, and refactors code based on clear specifications.
 mode: subagent
-model: opencode/minimax-m2.5-free
+model: opencode/deepseek-v4-flash-free
 temperature: 0.2
 tools:
   read: true

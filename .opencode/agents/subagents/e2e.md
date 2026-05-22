@@ -1,7 +1,7 @@
 ---
 description: End-to-end test specialist for Playwright browser testing, cross-browser verification, and user-flow automation.
 mode: subagent
-model: opencode/minimax-m2.5-free
+model: opencode/deepseek-v4-flash-free
 temperature: 0.2
 tools:
   read: true
