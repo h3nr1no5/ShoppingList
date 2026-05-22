@@ -1,7 +1,7 @@
 ---
 description: Test specialist that writes unit/integration tests (backend pytest + frontend vitest) and verifies functionality.
 mode: subagent
-model: opencode/minimax-m2.5-free
+model: opencode/deepseek-v4-flash-free
 temperature: 0.2
 tools:
   read: true

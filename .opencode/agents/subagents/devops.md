@@ -1,7 +1,7 @@
 ---
 description: Specialized DevOps engineer for cloud deployments, IaC, pipelines, and infrastructure. Handles azd, Bicep/Terraform, GitHub Actions, monitoring, and troubleshooting.
 mode: subagent
-model: opencode/minimax-m2.5-free
+model: opencode/deepseek-v4-flash-free
 temperature: 0.2
 tools:
   read: true

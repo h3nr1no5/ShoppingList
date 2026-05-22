@@ -1,7 +1,7 @@
 ---
 description: Prompt engineer improving prompts
 mode: subagent
-model: opencode/minimax-m2.5-free
+model: opencode/deepseek-v4-flash-free
 temperature: 0.5
 tools:
   read: true

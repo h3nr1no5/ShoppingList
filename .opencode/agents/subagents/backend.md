@@ -1,7 +1,7 @@
 ---
 description: Backend development specialist focused on APIs, servers, databases, business logic, performance, and scalability.
 mode: subagent
-model: opencode/minimax-m2.5-free
+model: opencode/deepseek-v4-flash-free
 temperature: 0.2
 tools:
   read: true

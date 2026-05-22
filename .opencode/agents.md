@@ -9,19 +9,19 @@ The central **@coordinator** (Big Pickle) decomposes tasks and delegates to spec
 | Agent          | Role                              | Free Model                     | Temp | Key Strength                     |
 |----------------|-----------------------------------|--------------------------------|------|----------------------------------|
 | @coordinator   | Orchestrator                      | big-pickle                     | 0.1  | Planning & delegation            |
-| @coder         | General Implementation            | minimax-m2.5-free              | 0.2 | Code writing                     |
-| @backend       | Backend APIs & Logic              | minimax-m2.5-free              | 0.2  | Server-side & databases          |
-| @frontend      | UI/UX & Components                | minimax-m2.5-free              | 0.25 | Frontend implementation          |
+| @coder         | General Implementation            | deepseek-v4-flash-free              | 0.2 | Code writing                     |
+| @backend       | Backend APIs & Logic              | deepseek-v4-flash-free              | 0.2  | Server-side & databases          |
+| @frontend      | UI/UX & Components                | deepseek-v4-flash-free              | 0.25 | Frontend implementation          |
 | @reviewer      | Code Quality & Review             | qwen3.6-plus-free                 | 0.05 | Critical feedback                |
-| @tester        | Testing                           | minimax-m2.5-free              | 0.2  | Test generation                  |
+| @tester        | Testing                           | deepseek-v4-flash-free              | 0.2  | Test generation                  |
 | @security      | Security Auditing                 | qwen3.6-plus-free                 | 0.05 | Vulnerability detection          |
 | @architect     | High-Level Design                 | big-pickle                     | 0.1  | Architecture & trade-offs        |
 | @owner         | Decision Making & Approval        | big-pickle                     | 0.1  | Final sign-off & prioritization  |
-| @docs          | Documentation                     | minimax-m2.5-free              | 0.3 | Technical writing                |
+| @docs          | Documentation                     | deepseek-v4-flash-free              | 0.3 | Technical writing                |
 | @researcher    | Codebase Exploration              | big-pickle                     | 0.2 | Analysis & context               |
-| @devops        | DevOps & Infrastructure           | minimax-m2.5-free              | 0.2  | Deployments & CI/CD              |
-| @e2e           | E2E / Playwright Testing          | minimax-m2.5-free              | 0.2  | Browser test automation          |
-| @prompter      | Prompt Engineering                | minimax-m2.5-free              | 0.5  | Prompt optimization              |
+| @devops        | DevOps & Infrastructure           | deepseek-v4-flash-free              | 0.2  | Deployments & CI/CD              |
+| @e2e           | E2E / Playwright Testing          | deepseek-v4-flash-free              | 0.2  | Browser test automation          |
+| @prompter      | Prompt Engineering                | deepseek-v4-flash-free              | 0.5  | Prompt optimization              |
 
 ## Usage
 - Start with `@coordinator` for best results.
