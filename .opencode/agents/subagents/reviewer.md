@@ -1,7 +1,7 @@
 ---
 description: Thorough code reviewer focused on quality, bugs, security, performance, and maintainability.
 mode: subagent
-model: opencode/qwen3.6-plus-free
+model: opencode/deepseek-v4-flash-free
 temperature: 0.05
 tools:
   read: true
