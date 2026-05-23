@@ -42,12 +42,13 @@ class TestAddItem:
         """Adding item to list should succeed."""
         response = await authenticated_client.post(
             f"/api/lists/{test_list.id}/items",
-            json={"name": "Milk", "quantity": 2},
+            json={"name": "Milk", "quantity": 2.5},
         )
         assert response.status_code == 200
         data = response.json()
         assert data["name"] == "Milk"
-        assert data["quantity"] == 2
+        assert data["quantity"] == 2.5
+        assert data["unit"] == "pcs"
 
     async def test_add_item_default_values(self, authenticated_client: AsyncClient, test_list):
         """Adding item should use default values."""
@@ -58,6 +59,7 @@ class TestAddItem:
         assert response.status_code == 200
         data = response.json()
         assert data["quantity"] == 1
+        assert data["unit"] == "pcs"
         assert data["is_checked"] is False
 
     async def test_add_item_missing_name(self, authenticated_client: AsyncClient, test_list):
@@ -95,10 +97,10 @@ class TestUpdateItem:
         """Updating item quantity should succeed."""
         response = await authenticated_client.put(
             f"/api/items/{test_item.id}",
-            json={"quantity": 10},
+            json={"quantity": 10.5},
         )
         assert response.status_code == 200
-        assert response.json()["quantity"] == 10
+        assert response.json()["quantity"] == 10.5
 
     async def test_update_item_is_checked(self, authenticated_client: AsyncClient, test_item):
         """Updating item is_checked should succeed."""
@@ -114,11 +116,11 @@ class TestUpdateItem:
         original_name = test_item.name
         response = await authenticated_client.put(
             f"/api/items/{test_item.id}",
-            json={"quantity": 5},
+            json={"quantity": 5.5},
         )
         assert response.status_code == 200
         assert response.json()["name"] == original_name
-        assert response.json()["quantity"] == 5
+        assert response.json()["quantity"] == 5.5
 
     async def test_update_item_not_found(self, authenticated_client: AsyncClient):
         """Updating nonexistent item should return 404."""

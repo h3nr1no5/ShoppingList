@@ -21,6 +21,7 @@ const createMockItem = (overrides: Partial<ListItemType> = {}): ListItemType => 
   list_id: 'list-1',
   name: 'Milk',
   quantity: 1,
+  unit: "pcs",
   is_checked: false,
   sort_order: 0,
   created_at: '2024-01-01',
@@ -39,16 +40,28 @@ describe('ListItem', () => {
       expect(screen.getByText('Milk')).toBeInTheDocument();
     });
 
-    it.each([2, 3, 5])('displays quantity when quantity is %d', (qty) => {
+    it.each([2, 3, 5])('displays quantity with unit for quantity %d', (qty) => {
       const mockItem = createMockItem({ quantity: qty });
       render(<ListItem item={mockItem} onToggle={vi.fn()} onDelete={vi.fn()} onEdit={vi.fn()} />);
-      expect(screen.getByText(`x${qty}`)).toBeInTheDocument();
+      expect(screen.getByText(`${qty} pcs`)).toBeInTheDocument();
     });
 
-    it('does not display quantity when equal to 1', () => {
-      const mockItem = createMockItem({ quantity: 1 });
+    it('displays x format when unit is empty and quantity > 1', () => {
+      const mockItem = createMockItem({ quantity: 2, unit: '' });
+      render(<ListItem item={mockItem} onToggle={vi.fn()} onDelete={vi.fn()} onEdit={vi.fn()} />);
+      expect(screen.getByText('x2')).toBeInTheDocument();
+    });
+
+    it('hides quantity when unit is empty and quantity is 1', () => {
+      const mockItem = createMockItem({ quantity: 1, unit: '' });
       render(<ListItem item={mockItem} onToggle={vi.fn()} onDelete={vi.fn()} onEdit={vi.fn()} />);
       expect(screen.queryByText('x1')).not.toBeInTheDocument();
+    });
+
+    it('does not display quantity when unit is "pcs" and quantity is 1', () => {
+      const mockItem = createMockItem({ quantity: 1, unit: 'pcs' });
+      render(<ListItem item={mockItem} onToggle={vi.fn()} onDelete={vi.fn()} onEdit={vi.fn()} />);
+      expect(screen.getByText('1 pcs')).toBeInTheDocument();
     });
 
     it('checkbox is unchecked when is_checked is false', () => {
@@ -340,6 +353,15 @@ describe('ListItem', () => {
       expect(screen.getByTitle('Cancel editing')).toBeInTheDocument();
     });
 
+    it('has unit dropdown in edit form', () => {
+      const mockItem = createMockItem({ unit: 'kg' });
+      render(<ListItem item={mockItem} onToggle={vi.fn()} onDelete={vi.fn()} onEdit={vi.fn()} />);
+      
+      fireEvent.click(screen.getByTitle('Edit item'));
+      
+      expect(screen.getByDisplayValue('kg')).toBeInTheDocument();
+    });
+
     it('calls onEdit with correct parameters when save is clicked', () => {
       const onEdit = vi.fn();
       const mockItem = createMockItem({ id: 'item-1', name: 'Milk', quantity: 1 });
@@ -354,7 +376,7 @@ describe('ListItem', () => {
       // Click save
       fireEvent.click(screen.getByTitle('Save changes'));
       
-      expect(onEdit).toHaveBeenCalledWith('item-1', 'Updated Milk', 1);
+      expect(onEdit).toHaveBeenCalledWith('item-1', 'Updated Milk', 1, 'pcs');
     });
 
     it('calls onEdit with quantity when quantity is changed', () => {
@@ -371,7 +393,7 @@ describe('ListItem', () => {
       // Click save
       fireEvent.click(screen.getByTitle('Save changes'));
       
-      expect(onEdit).toHaveBeenCalledWith('item-1', 'Milk', 5);
+      expect(onEdit).toHaveBeenCalledWith('item-1', 'Milk', 5, 'pcs');
     });
 
     it('hides edit form when cancel is clicked', () => {

@@ -13,6 +13,12 @@ cd backend && bash stop.sh       # kills uvicorn
 cd frontend && bash run.sh       # installs deps + Vite dev server on :5173
 ```
 
+## Migration (quantity float + unit)
+```bash
+bash backend/scripts/migrate_float_unit.sh   # ALTER TABLE for existing DB
+```
+The script is idempotent — safe to run multiple times. Changes `quantity` to `FLOAT` and adds `unit VARCHAR(20)`.
+
 ## Dev Commands
 ```bash
 # Backend tests (requires PostgreSQL running via docker compose)
@@ -46,6 +52,8 @@ cd frontend && npm run lint    # eslint
 - **Offline queue uses localStorage** — `useOfflineQueue` hook stores pending changes under `pending_changes_{listId}`. No size limit enforcement yet. Changes persist across page refreshes but not across browser storage clears.
 - **Duplicate item names rejected** — adding or editing items with duplicate names within the same list is validated and rejected.
 - **Static files mounting checks for directory** — `main.py` checks if the static directory exists before mounting (allows running backend without built frontend in development).
+- **Quantity is now FLOAT** — `ListItem.quantity` is `Float` (was `Integer`). Frontend uses `parseFloat`. Range: 0.1–9999. Backward compatible — integer values still accepted.
+- **Items have a unit field** — `ListItem.unit` (VARCHAR(20), default `"pcs"`). Display: `{quantity} {unit}` when unit is set (e.g. `2 kg`, `1 pcs`). Falls back to `x{quantity}` when unit is empty.
 
 ## Architecture
 
@@ -122,3 +130,4 @@ azd provision
 - `.github/workflows/deploy-dev.yml` — ACI staging workflow (ephemeral, push to `dev`)
 - `.github/workflows/deploy.yml` — production deployment workflow (push to `main`)
 - `infra/main.bicep` — Azure infrastructure (single container app)
+- `backend/scripts/migrate_float_unit.sh` — DB migration for float quantity + unit column

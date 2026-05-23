@@ -169,6 +169,7 @@ class TestShoppingListWithItemsResponse:
             list_id=list_id,
             name="Milk",
             quantity=1,
+            unit="pcs",
             is_checked=False,
             sort_order=0,
             created_at=now,
@@ -184,6 +185,7 @@ class TestShoppingListWithItemsResponse:
         )
         assert len(data.items) == 1
         assert data.items[0].name == "Milk"
+        assert data.items[0].unit == "pcs"
 
 
 @pytest.mark.unit
@@ -200,11 +202,12 @@ class TestListItemCreate:
         data = ListItemCreate(name="Milk")
         assert data.name == "Milk"
         assert data.quantity == 1
+        assert data.unit == "pcs"
         assert data.is_checked is False
 
     def test_custom_quantity(self):
-        data = ListItemCreate(name="Eggs", quantity=12)
-        assert data.quantity == 12
+        data = ListItemCreate(name="Eggs", quantity=12.5)
+        assert data.quantity == 12.5
 
     def test_checked_item(self):
         data = ListItemCreate(name="Bread", is_checked=True)
@@ -222,8 +225,8 @@ class TestListItemUpdate:
         assert data.name == "New Name"
 
     def test_update_quantity(self):
-        data = ListItemUpdate(quantity=5)
-        assert data.quantity == 5
+        data = ListItemUpdate(quantity=5.5)
+        assert data.quantity == 5.5
 
     def test_update_is_checked(self):
         data = ListItemUpdate(is_checked=True)
@@ -237,13 +240,15 @@ class TestListItemUpdate:
         data = ListItemUpdate()
         assert data.name is None
         assert data.quantity is None
+        assert data.unit is None
         assert data.is_checked is None
         assert data.sort_order is None
 
     def test_update_multiple_fields(self):
-        data = ListItemUpdate(name="Milk", quantity=2, is_checked=True)
+        data = ListItemUpdate(name="Milk", quantity=2.5, is_checked=True, unit="kg")
         assert data.name == "Milk"
-        assert data.quantity == 2
+        assert data.quantity == 2.5
+        assert data.unit == "kg"
         assert data.is_checked is True
 
 
@@ -257,12 +262,14 @@ class TestListItemResponse:
             list_id=list_id,
             name="Milk",
             quantity=1,
+            unit="pcs",
             is_checked=False,
             sort_order=0,
             created_at=now,
         )
         assert data.name == "Milk"
         assert data.list_id == list_id
+        assert data.unit == "pcs"
 
 
 @pytest.mark.unit

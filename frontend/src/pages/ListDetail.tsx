@@ -55,7 +55,7 @@ const ListDetail: React.FC = () => {
           case 'add': {
             const response = await apiClientNoRedirect.post<ListItemType>(
               `/lists/${id}/items`,
-              { name: change.name, quantity: change.quantity }
+              { name: change.name, quantity: change.quantity, unit: change.unit }
             );
             tempIdMap[change.tempId] = response.data.id;
             setList(prev => {
@@ -83,6 +83,7 @@ const ListDetail: React.FC = () => {
             await apiClientNoRedirect.put(`/items/${realId}`, {
               name: change.name,
               quantity: change.quantity,
+              unit: change.unit,
             });
             break;
           }
@@ -155,7 +156,7 @@ const ListDetail: React.FC = () => {
     }
   }, [loadingList, list, isConnected, syncPendingChanges]);
 
-  const handleAddItem = async (name: string, quantity: number): Promise<void> => {
+  const handleAddItem = async (name: string, quantity: number, unit: string): Promise<void> => {
     if (!list) return;
 
     // Check for duplicate name (case-insensitive)
@@ -174,6 +175,7 @@ const ListDetail: React.FC = () => {
       list_id: list.id,
       name,
       quantity,
+      unit,
       is_checked: false,
       sort_order: (list.items ?? []).length,
       created_at: new Date().toISOString(),
@@ -188,7 +190,7 @@ const ListDetail: React.FC = () => {
     // Fire API in background — no revert on failure
     if (isConnected) {
       try {
-        const response = await apiClientNoRedirect.post<ListItemType>(`/lists/${list.id}/items`, { name, quantity });
+        const response = await apiClientNoRedirect.post<ListItemType>(`/lists/${list.id}/items`, { name, quantity, unit });
         // Replace temp ID with real one from server
         setList(prev => {
           if (!prev) return prev;
@@ -201,10 +203,10 @@ const ListDetail: React.FC = () => {
         });
       } catch (err) {
         console.error('Failed to add item:', err);
-        enqueue({ type: 'add', tempId, name, quantity });
+        enqueue({ type: 'add', tempId, name, quantity, unit });
       }
     } else {
-      enqueue({ type: 'add', tempId, name, quantity });
+      enqueue({ type: 'add', tempId, name, quantity, unit });
     }
   };
 
@@ -265,7 +267,7 @@ const ListDetail: React.FC = () => {
     }
   };
 
-  const handleEditItem = async (itemId: string, name: string, quantity: number): Promise<void> => {
+  const handleEditItem = async (itemId: string, name: string, quantity: number, unit: string): Promise<void> => {
     if (!list) return;
 
     // Check for duplicate name (case-insensitive), excluding current item
@@ -283,7 +285,7 @@ const ListDetail: React.FC = () => {
       return {
         ...prev,
         items: (prev.items ?? []).map(item =>
-          item.id === itemId ? { ...item, name, quantity } : item
+          item.id === itemId ? { ...item, name, quantity, unit } : item
         )
       };
     });
@@ -291,13 +293,13 @@ const ListDetail: React.FC = () => {
     // Fire API in background if connected
     if (isConnected) {
       try {
-        await apiClientNoRedirect.put(`/items/${itemId}`, { name, quantity });
+        await apiClientNoRedirect.put(`/items/${itemId}`, { name, quantity, unit });
       } catch (err: unknown) {
         console.error('Failed to edit item:', err);
-        enqueue({ type: 'edit', itemId, name, quantity });
+        enqueue({ type: 'edit', itemId, name, quantity, unit });
       }
     } else {
-      enqueue({ type: 'edit', itemId, name, quantity });
+      enqueue({ type: 'edit', itemId, name, quantity, unit });
     }
   };
 

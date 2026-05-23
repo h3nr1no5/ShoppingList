@@ -111,6 +111,7 @@ class TestShareCodeAccess:
             list_id=test_list_with_share_code.id,
             name="Shared Item",
             quantity=1,
+            unit="pcs",
             is_checked=False,
             sort_order=0,
         )
@@ -141,6 +142,7 @@ class TestShareCodeAccess:
             list_id=test_list_with_share_code.id,
             name="Shared Item",
             quantity=1,
+            unit="pcs",
             is_checked=False,
             sort_order=0,
         )

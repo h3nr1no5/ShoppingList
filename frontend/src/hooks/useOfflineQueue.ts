@@ -14,6 +14,7 @@ export interface PendingEdit {
   itemId: string;
   name: string;
   quantity: number;
+  unit: string;
   timestamp: number;
 }
 
@@ -30,6 +31,7 @@ export interface PendingAdd {
   tempId: string;
   name: string;
   quantity: number;
+  unit: string;
   timestamp: number;
 }
 
