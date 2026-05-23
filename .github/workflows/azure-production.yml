@@ -1,4 +1,4 @@
-name: Deploy to Azure
+name: Azure — Production
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
       - 'backend/**'
       - 'frontend/**'
       - 'Dockerfile'
-      - '.github/workflows/deploy.yml'
+      - '.github/workflows/azure-production.yml'
   workflow_dispatch:
 
 permissions:
@@ -161,7 +161,6 @@ jobs:
           echo "RESOURCE_GROUP=$RG" >> "$GITHUB_ENV"
 
           CONTAINER_APP_NAME="shoppinglist-app"
-          # Verify the container app exists
           if ! az containerapp show --name "$CONTAINER_APP_NAME" --resource-group "$RG" > /dev/null 2>&1; then
             echo "ERROR: Container app '$CONTAINER_APP_NAME' not found in resource group $RG"
             exit 1

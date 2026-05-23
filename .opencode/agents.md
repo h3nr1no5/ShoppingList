@@ -12,9 +12,9 @@ The central **@coordinator** (Big Pickle) decomposes tasks and delegates to spec
 | @coder         | General Implementation            | deepseek-v4-flash-free              | 0.2 | Code writing                     |
 | @backend       | Backend APIs & Logic              | deepseek-v4-flash-free              | 0.2  | Server-side & databases          |
 | @frontend      | UI/UX & Components                | deepseek-v4-flash-free              | 0.25 | Frontend implementation          |
-| @reviewer      | Code Quality & Review             | qwen3.6-plus-free                 | 0.05 | Critical feedback                |
+| @reviewer      | Code Quality & Review             | deepseek-v4-flash-free                 | 0.05 | Critical feedback                |
 | @tester        | Testing                           | deepseek-v4-flash-free              | 0.2  | Test generation                  |
-| @security      | Security Auditing                 | qwen3.6-plus-free                 | 0.05 | Vulnerability detection          |
+| @security      | Security Auditing                 | deepseek-v4-flash-free                 | 0.05 | Vulnerability detection          |
 | @architect     | High-Level Design                 | big-pickle                     | 0.1  | Architecture & trade-offs        |
 | @owner         | Decision Making & Approval        | big-pickle                     | 0.1  | Final sign-off & prioritization  |
 | @docs          | Documentation                     | deepseek-v4-flash-free              | 0.3 | Technical writing                |

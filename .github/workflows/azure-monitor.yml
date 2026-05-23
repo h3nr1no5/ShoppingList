@@ -1,11 +1,9 @@
-name: Scheduled Smoke Test
+name: Azure — Monitor
 
 on:
   schedule:
-    # Run every 15 minutes to catch issues between deployments
     - cron: '*/15 * * * *'
   workflow_dispatch:
-    # Allow manual trigger from the Actions tab
 
 permissions:
   id-token: write
@@ -96,7 +94,6 @@ jobs:
                 body,
                 labels: ['smoke-test-failure'],
               });
-              console.log('Created issue');
             } else {
               console.log('Issue already exists, skipping');
             }
