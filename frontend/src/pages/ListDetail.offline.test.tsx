@@ -272,6 +272,43 @@ describe('ListDetail - Offline Queue Behavior', () => {
     });
   });
 
+  describe('Syncing offline changes', () => {
+    it('syncs offline add with unit correctly', async () => {
+      // Pre-populate localStorage with a pending add that has unit "l"
+      const pendingAdd = {
+        type: 'add',
+        id: 'test-change-1',
+        tempId: 'temp-test-1',
+        name: 'Water',
+        quantity: 1,
+        unit: 'l',
+        timestamp: Date.now(),
+      };
+      localStorage.setItem(
+        'pending_changes_list-1',
+        JSON.stringify([pendingAdd])
+      );
+
+      // Mock the API response for the sync (post returns the created item)
+      vi.mocked(apiClientNoRedirect.post).mockResolvedValue({
+        data: { id: 'real-item-1' },
+      } as any);
+
+      renderWithAuth(<ListDetail />, true, true);
+
+      // Wait for the API call to be made during sync
+      await waitFor(() => {
+        expect(apiClientNoRedirect.post).toHaveBeenCalled();
+      });
+
+      // Verify the API call included the correct unit in the payload
+      expect(apiClientNoRedirect.post).toHaveBeenCalledWith(
+        '/lists/list-1/items',
+        { name: 'Water', quantity: 1, unit: 'l' }
+      );
+    });
+  });
+
   describe('When online with API failure', () => {
     it('enqueues a toggle change when the API call fails', async () => {
       // Make apiClientNoRedirect.put reject to simulate network failure

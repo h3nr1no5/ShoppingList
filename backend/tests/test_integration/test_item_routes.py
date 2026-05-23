@@ -62,6 +62,28 @@ class TestAddItem:
         assert data["unit"] == "pcs"
         assert data["is_checked"] is False
 
+    async def test_add_item_with_custom_unit(self, authenticated_client: AsyncClient, test_list):
+        """Add item with custom unit via API."""
+        response = await authenticated_client.post(
+            f"/api/lists/{test_list.id}/items",
+            json={"name": "Milk", "quantity": 2.0, "unit": "l"},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["unit"] == "l"
+        assert data["name"] == "Milk"
+
+    async def test_add_item_fractional_quantity(self, authenticated_client: AsyncClient, test_list):
+        """Add item with fractional quantity via API."""
+        response = await authenticated_client.post(
+            f"/api/lists/{test_list.id}/items",
+            json={"name": "Flour", "quantity": 0.5, "unit": "kg"},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["quantity"] == 0.5
+        assert data["unit"] == "kg"
+
     async def test_add_item_missing_name(self, authenticated_client: AsyncClient, test_list):
         """Adding item without name should return 422."""
         response = await authenticated_client.post(
@@ -101,6 +123,16 @@ class TestUpdateItem:
         )
         assert response.status_code == 200
         assert response.json()["quantity"] == 10.5
+
+    async def test_update_item_unit(self, authenticated_client: AsyncClient, test_item):
+        """Update item unit only via API."""
+        response = await authenticated_client.put(
+            f"/api/items/{test_item.id}",
+            json={"unit": "l"},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["unit"] == "l"
 
     async def test_update_item_is_checked(self, authenticated_client: AsyncClient, test_item):
         """Updating item is_checked should succeed."""

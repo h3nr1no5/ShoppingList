@@ -188,6 +188,13 @@ class TestListItemCrud:
         assert item.unit == "pcs"
         assert item.list_id == test_list.id
 
+    async def test_create_with_custom_unit(self, db_session, test_list):
+        """Create item with custom unit."""
+        item_data = ListItemCreate(name="Milk", quantity=2.0, unit="l")
+        item = await create_list_item(db_session, test_list.id, item_data)
+        assert item.unit == "l"
+        assert item.name == "Milk"
+
     async def test_create_list_item_default_values(self, db_session, test_list):
         """Creating an item should use default values."""
         item_data = ListItemCreate(name="Bread")
@@ -252,6 +259,14 @@ class TestListItemCrud:
         updated = await update_list_item(db_session, test_item, update_data)
         assert updated.name == original_name
         assert updated.quantity == 5.5
+
+    async def test_update_unit(self, db_session, test_item):
+        """Update item unit only."""
+        update = ListItemUpdate(unit="l")
+        updated = await update_list_item(db_session, test_item, update)
+        assert updated.unit == "l"
+        # other fields unchanged
+        assert updated.name == test_item.name
 
     async def test_delete_list_item(self, db_session, test_item):
         """Deleting an item should remove it."""

@@ -305,6 +305,14 @@ describe('ListItem', () => {
     });
   });
 
+  describe('Float quantity display', () => {
+    it('displays float quantity with unit', () => {
+      const mockItem = createMockItem({ quantity: 2.5, unit: 'kg' });
+      render(<ListItem item={mockItem} onToggle={vi.fn()} onDelete={vi.fn()} onEdit={vi.fn()} />);
+      expect(screen.getByText('2.5 kg')).toBeInTheDocument();
+    });
+  });
+
   describe('Edit functionality', () => {
     it('shows edit form when edit button is clicked', () => {
       const mockItem = createMockItem({ id: 'item-1', name: 'Milk', quantity: 2 });
@@ -377,6 +385,29 @@ describe('ListItem', () => {
       fireEvent.click(screen.getByTitle('Save changes'));
       
       expect(onEdit).toHaveBeenCalledWith('item-1', 'Updated Milk', 1, 'pcs');
+    });
+
+    it('calls onEdit with updated unit when unit changes in edit mode', () => {
+      const onEdit = vi.fn();
+      const mockItem = createMockItem({
+        id: 'item-1',
+        name: 'Milk',
+        quantity: 1,
+        unit: 'pcs',
+      });
+      render(<ListItem item={mockItem} onToggle={vi.fn()} onDelete={vi.fn()} onEdit={onEdit} />);
+
+      // Enter edit mode
+      fireEvent.click(screen.getByTitle('Edit item'));
+
+      // Change unit from "pcs" to "kg"
+      const unitSelect = screen.getByDisplayValue('pcs') as HTMLSelectElement;
+      fireEvent.change(unitSelect, { target: { value: 'kg' } });
+
+      // Save
+      fireEvent.click(screen.getByTitle('Save changes'));
+
+      expect(onEdit).toHaveBeenCalledWith('item-1', 'Milk', 1, 'kg');
     });
 
     it('calls onEdit with quantity when quantity is changed', () => {
