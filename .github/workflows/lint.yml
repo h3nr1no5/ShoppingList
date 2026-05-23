@@ -1,0 +1,17 @@
+name: Lint
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main, dev]
+  workflow_dispatch:
+
+jobs:
+  actionlint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: reviewdog/action-actionlint@v1
+        with:
+          fail_level: error
