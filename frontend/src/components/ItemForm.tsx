@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-
-const UNIT_OPTIONS = ["pcs", "kg", "g", "L", "ml", "m", "cm", "tsp", "tbsp", "cups"];
+import { UNIT_OPTIONS } from '../constants';
 
 interface ItemFormProps {
   onSubmit: (name: string, quantity: number, unit: string) => void;
@@ -61,7 +60,7 @@ const ItemForm: React.FC<ItemFormProps> = ({ onSubmit, onCancel }) => {
           aria-label="Unit"
         >
           {UNIT_OPTIONS.map((u) => (
-            <option key={u} value={u}>{u}</option>
+            <option key={u} value={u}>{t(`unit.${u}`)}</option>
           ))}
         </select>
         <button type="submit" className="btn btn-primary">

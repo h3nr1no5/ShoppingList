@@ -5,8 +5,9 @@ import { type ListItem as ListItemType } from '../types';
 import type { TFunction } from 'i18next';
 import Swipeable from './Swipeable';
 import ConfirmDialog from './ConfirmDialog';
-
-const UNIT_OPTIONS = ["pcs", "kg", "g", "L", "ml", "m", "cm", "tsp", "tbsp", "cups"];
+import { UNIT_OPTIONS } from '../constants';
+const VALID_UNITS = new Set<string>(UNIT_OPTIONS);
+const coerceUnit = (u: string): string => VALID_UNITS.has(u) ? u : "pcs";
 
 /** Formats a date string as relative time (e.g., "5m ago", "2h ago", "Jan 4") */
 function formatRelativeTime(dateString: string, t: TFunction): string {
@@ -53,7 +54,7 @@ const ListItem: React.FC<ListItemProps> = ({ item, onToggle, onDelete, onEdit })
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(item.name);
   const [editQuantity, setEditQuantity] = useState(item.quantity);
-  const [editUnit, setEditUnit] = useState(item.unit || "pcs");
+  const [editUnit, setEditUnit] = useState(coerceUnit(item.unit) || "pcs");
   const [quantityInputValue, setQuantityInputValue] = useState(String(item.quantity));
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -77,14 +78,15 @@ const ListItem: React.FC<ListItemProps> = ({ item, onToggle, onDelete, onEdit })
   const handleEdit = (): void => {
     setEditName(item.name);
     setEditQuantity(item.quantity);
-    setEditUnit(item.unit || "pcs");
+    setEditUnit(coerceUnit(item.unit) || "pcs");
     setQuantityInputValue(String(item.quantity));
     setIsEditing(true);
   };
 
   const handleSave = (): void => {
     if (editName.trim() && editQuantity >= 0.1 && editQuantity <= 9999) {
-      onEdit(item.id, editName.trim(), editQuantity, editUnit);
+      const finalUnit = coerceUnit(editUnit);
+      onEdit(item.id, editName.trim(), editQuantity, finalUnit);
       setIsEditing(false);
     }
   };
@@ -93,7 +95,7 @@ const ListItem: React.FC<ListItemProps> = ({ item, onToggle, onDelete, onEdit })
     setIsEditing(false);
     setEditName(item.name);
     setEditQuantity(item.quantity);
-    setEditUnit(item.unit || "pcs");
+    setEditUnit(coerceUnit(item.unit) || "pcs");
     setQuantityInputValue(String(item.quantity));
   };
 
@@ -187,7 +189,7 @@ const ListItem: React.FC<ListItemProps> = ({ item, onToggle, onDelete, onEdit })
             aria-label="Unit"
           >
             {UNIT_OPTIONS.map((u) => (
-              <option key={u} value={u}>{u}</option>
+              <option key={u} value={u}>{t(`unit.${u}`)}</option>
             ))}
           </select>
           <button

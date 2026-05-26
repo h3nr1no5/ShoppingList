@@ -131,5 +131,12 @@
   "accessibility": {
     "notifications": "Notifications",
     "dismiss_notification": "Dismiss notification"
+  },
+  "unit": {
+    "pcs": "pcs",
+    "L": "L",
+    "kg": "kg",
+    "g": "g",
+    "m": "m"
   }
 }
