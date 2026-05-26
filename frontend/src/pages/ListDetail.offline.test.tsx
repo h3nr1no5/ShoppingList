@@ -9,6 +9,7 @@ import { ToastProvider } from '../context/ToastContext';
 import { useToastContext } from '../context/useToastContext';
 import { ApiHealthContext } from '../context/ApiHealthContext';
 import { ToastContainer } from '../components/ToastContainer';
+import { type AxiosResponse } from 'axios';
 
 // Mock the apiClient
 vi.mock('../api/client', async () => {
@@ -292,7 +293,7 @@ describe('ListDetail - Offline Queue Behavior', () => {
       // Mock the API response for the sync (post returns the created item)
       vi.mocked(apiClientNoRedirect.post).mockResolvedValue({
         data: { id: 'real-item-1' },
-      } as any);
+      } as unknown as AxiosResponse<{ id: string }>);
 
       renderWithAuth(<ListDetail />, true, true);
 
