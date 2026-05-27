@@ -239,7 +239,7 @@ def test_add_item(base_url: str, token: str, list_id: str) -> None:
     status, body = request(
         f"{base_url}/api/lists/{list_id}/items",
         method="POST",
-        body={"name": "Smoke Test Item", "quantity": 1},
+        body={"name": "Smoke Test Item", "quantity": 2.5},
         headers={"Authorization": f"Bearer {token}"},
     )
     body_dict = parse_json_body(body, "add item")

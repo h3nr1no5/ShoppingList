@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
-from sqlalchemy import String, Boolean, Integer, DateTime, ForeignKey, Index
+from sqlalchemy import String, Boolean, Integer, Float, DateTime, ForeignKey, Index
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID
 
@@ -132,9 +132,14 @@ class ListItem(Base):
         String(255),
         nullable=False,
     )
-    quantity: Mapped[int] = mapped_column(
-        Integer,
+    quantity: Mapped[float] = mapped_column(
+        Float,
         default=1,
+        nullable=False,
+    )
+    unit: Mapped[str] = mapped_column(
+        String(20),
+        default="pcs",
         nullable=False,
     )
     is_checked: Mapped[bool] = mapped_column(

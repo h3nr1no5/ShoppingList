@@ -4,9 +4,9 @@ import { TEST_USER_EMAIL, TEST_USER_PASSWORD } from './helpers/config';
 import type { Page, BrowserContext } from '@playwright/test';
 
 type OfflineChange =
-  | { type: 'add'; itemId: string; name: string; quantity: number }
+  | { type: 'add'; tempId: string; name: string; quantity: number; unit: string }
   | { type: 'toggle'; itemId: string; is_checked: boolean }
-  | { type: 'edit'; itemId: string; name: string }
+  | { type: 'edit'; itemId: string; name: string; quantity: number; unit: string }
   | { type: 'delete'; itemId: string };
 
 /**
@@ -72,7 +72,7 @@ test.describe.serial('Offline item operations', () => {
     await expect(page.locator('text=Bread')).toBeVisible();
 
     // Verify quantity badge (only rendered when qty > 1)
-    await expect(page.locator('text=x2')).toBeVisible();
+    await expect(page.locator('text=2 pcs')).toBeVisible();
   });
 
   // ----------------------------------------------------------------

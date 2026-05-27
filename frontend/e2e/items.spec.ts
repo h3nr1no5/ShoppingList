@@ -35,11 +35,11 @@ test.describe('Item management', () => {
       await authedPage.goto(`/lists/${listId}`);
 
       await authedPage.fill('[placeholder="Add new item..."]', 'Eggs');
-      await authedPage.fill('[aria-label="Quantity"]', '12');
+      await authedPage.fill('[aria-label="Quantity"]', '2.5');
       await authedPage.click('button:has-text("Add")');
 
       await expect(authedPage.locator('text=Eggs')).toBeVisible();
-      await expect(authedPage.locator('text=x12')).toBeVisible();
+      await expect(authedPage.locator('text=2.5 pcs')).toBeVisible();
     });
   });
 

@@ -15,6 +15,7 @@ interface CreatedItem {
   id: string;
   name: string;
   quantity: number;
+  unit: string;
 }
 
 /** Build headers with Authorization only if token is provided */
@@ -117,9 +118,10 @@ export async function createItem(
   listId: string,
   name: string,
   quantity = 1,
+  unit = 'pcs',
 ): Promise<CreatedItem> {
   const res = await request.post(`${API_BASE_URL}/lists/${listId}/items`, {
-    data: { name, quantity },
+    data: { name, quantity, unit },
     headers: authHeaders(token),
   });
 

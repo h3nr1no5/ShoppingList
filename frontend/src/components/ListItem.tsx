@@ -5,6 +5,9 @@ import { type ListItem as ListItemType } from '../types';
 import type { TFunction } from 'i18next';
 import Swipeable from './Swipeable';
 import ConfirmDialog from './ConfirmDialog';
+import { UNIT_OPTIONS } from '../constants';
+const VALID_UNITS = new Set<string>(UNIT_OPTIONS);
+const coerceUnit = (u: string): string => VALID_UNITS.has(u) ? u : "pcs";
 
 /** Formats a date string as relative time (e.g., "5m ago", "2h ago", "Jan 4") */
 function formatRelativeTime(dateString: string, t: TFunction): string {
@@ -33,8 +36,8 @@ function formatRelativeTime(dateString: string, t: TFunction): string {
  * Values above 9999 are clamped to 9999.
  */
 const clampQuantity = (value: string): number => {
-  const parsed = parseInt(value, 10);
-  if (isNaN(parsed) || parsed < 1) return 1;
+  const parsed = parseFloat(value);
+  if (isNaN(parsed) || parsed < 0.1) return 1;
   if (parsed > 9999) return 9999;
   return parsed;
 };
@@ -43,7 +46,7 @@ interface ListItemProps {
   item: ListItemType;
   onToggle: (id: string, isChecked: boolean) => void;
   onDelete: (id: string) => void;
-  onEdit: (id: string, name: string, quantity: number) => void;
+  onEdit: (id: string, name: string, quantity: number, unit: string) => void;
 }
 
 const ListItem: React.FC<ListItemProps> = ({ item, onToggle, onDelete, onEdit }) => {
@@ -51,6 +54,7 @@ const ListItem: React.FC<ListItemProps> = ({ item, onToggle, onDelete, onEdit })
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(item.name);
   const [editQuantity, setEditQuantity] = useState(item.quantity);
+  const [editUnit, setEditUnit] = useState(coerceUnit(item.unit) || "pcs");
   const [quantityInputValue, setQuantityInputValue] = useState(String(item.quantity));
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -74,13 +78,15 @@ const ListItem: React.FC<ListItemProps> = ({ item, onToggle, onDelete, onEdit })
   const handleEdit = (): void => {
     setEditName(item.name);
     setEditQuantity(item.quantity);
+    setEditUnit(coerceUnit(item.unit) || "pcs");
     setQuantityInputValue(String(item.quantity));
     setIsEditing(true);
   };
 
   const handleSave = (): void => {
-    if (editName.trim() && editQuantity >= 1 && editQuantity <= 9999) {
-      onEdit(item.id, editName.trim(), editQuantity);
+    if (editName.trim() && editQuantity >= 0.1 && editQuantity <= 9999) {
+      const finalUnit = coerceUnit(editUnit);
+      onEdit(item.id, editName.trim(), editQuantity, finalUnit);
       setIsEditing(false);
     }
   };
@@ -89,6 +95,7 @@ const ListItem: React.FC<ListItemProps> = ({ item, onToggle, onDelete, onEdit })
     setIsEditing(false);
     setEditName(item.name);
     setEditQuantity(item.quantity);
+    setEditUnit(coerceUnit(item.unit) || "pcs");
     setQuantityInputValue(String(item.quantity));
   };
 
@@ -121,7 +128,9 @@ const ListItem: React.FC<ListItemProps> = ({ item, onToggle, onDelete, onEdit })
           <span className={`item-name ${item.is_checked ? 'checked' : ''}`}>
             {item.name}
           </span>
-          {item.quantity > 1 && (
+          {item.unit ? (
+            <span className="item-quantity">{item.quantity} {item.unit}</span>
+          ) : item.quantity > 1 && (
             <span className="item-quantity">x{item.quantity}</span>
           )}
           
@@ -173,6 +182,16 @@ const ListItem: React.FC<ListItemProps> = ({ item, onToggle, onDelete, onEdit })
             aria-valuemax={9999}
             aria-valuenow={editQuantity}
           />
+          <select
+            value={editUnit}
+            onChange={(e) => setEditUnit(e.target.value)}
+            className="edit-unit-select"
+            aria-label="Unit"
+          >
+            {UNIT_OPTIONS.map((u) => (
+              <option key={u} value={u}>{t(`unit.${u}`)}</option>
+            ))}
+          </select>
           <button
             type="submit"
             className="btn-icon btn-save-item"
