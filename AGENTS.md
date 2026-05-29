@@ -19,6 +19,15 @@ bash backend/scripts/migrate_float_unit.sh   # ALTER TABLE for existing DB
 ```
 The script is idempotent — safe to run multiple times. Changes `quantity` to `FLOAT` and adds `unit VARCHAR(20)`.
 
+## E2E Database Cleanup
+```bash
+bash backend/scripts/e2e_db_clean.sh   # drop and recreate shoppinglist_e2e database
+```
+E2E tests use a dedicated `shoppinglist_e2e` PostgreSQL database, keeping the dev `shoppinglist` database clean. The database is dropped and recreated before each E2E run:
+- **`bash run-e2e-tests.sh`** — handles cleanup automatically after starting PostgreSQL.
+- **`cd frontend && npx playwright test`** — Playwright's webServer config chains `e2e_db_clean.sh` before starting the backend, so cleanup still happens.
+- **Standalone use** — the script can be run manually to reset the E2E database at any time.
+
 ## Dev Commands
 ```bash
 # Backend tests (requires PostgreSQL running via docker compose)
@@ -33,8 +42,8 @@ cd backend && python smoke_test.py       # run against local :8000
 # Or run via: bash run-e2e-tests.sh       # starts PostgreSQL + runs smoke tests
 
 # E2E tests (requires PostgreSQL)
-bash run-e2e-tests.sh                    # starts PostgreSQL, installs deps, runs Playwright
-cd frontend && npx playwright test       # run Playwright tests directly
+bash run-e2e-tests.sh                    # starts PostgreSQL, cleans shoppinglist_e2e DB, runs Playwright
+cd frontend && npx playwright test       # run Playwright tests directly (auto-cleans DB via webServer config)
 
 # Frontend
 cd frontend && npm run build   # tsc -b && vite build
@@ -131,3 +140,4 @@ azd provision
 - `.github/workflows/deploy.yml` — production deployment workflow (push to `main`)
 - `infra/main.bicep` — Azure infrastructure (single container app)
 - `backend/scripts/migrate_float_unit.sh` — DB migration for float quantity + unit column
+- `backend/scripts/e2e_db_clean.sh` — drops and recreates the `shoppinglist_e2e` database
