@@ -31,9 +31,9 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: 'cd ../backend && bash run.sh',
+      command: 'cd ../backend && bash scripts/e2e_db_clean.sh && bash run.sh',
       port: 8000,
-      reuseExistingServer: true,
+      reuseExistingServer: !!process.env.CI,
       timeout: 120000,
       stdout: 'pipe',
       stderr: 'pipe',
@@ -42,6 +42,7 @@ export default defineConfig({
         LOGIN_RATE_LIMIT: process.env.LOGIN_RATE_LIMIT || '200/minute',
         SHARED_LIST_RATE_LIMIT: process.env.SHARED_LIST_RATE_LIMIT || '500/minute',
         E2E_INVITE_CODE: process.env.E2E_INVITE_CODE || '',
+        DATABASE_URL: 'postgresql+asyncpg://postgres:postgres@localhost:5432/shoppinglist_e2e',
       },
     },
     {
