@@ -66,11 +66,23 @@ engine_kwargs = {
 }
 if not is_sqlite:
     engine_kwargs["pool_pre_ping"] = True
-    engine_kwargs["pool_size"] = 10
-    engine_kwargs["max_overflow"] = 20
+    pool_size = int(os.getenv("DB_POOL_SIZE", "10"))
+    max_overflow = int(os.getenv("DB_MAX_OVERFLOW", "10"))
+    if pool_size < 1 or pool_size > 100:
+        raise ValueError(f"DB_POOL_SIZE must be 1–100, got {pool_size}")
+    if max_overflow < 0 or max_overflow > 200:
+        raise ValueError(f"DB_MAX_OVERFLOW must be 0–200, got {max_overflow}")
+    engine_kwargs["pool_size"] = pool_size
+    engine_kwargs["max_overflow"] = max_overflow
     # Enable SSL only for Azure PostgreSQL (not for local Docker Postgres)
     # Azure requires SSL, local development does not
-    if "azure" in DATABASE_URL.lower() or "cloudapp" in DATABASE_URL.lower():
+    if "supabase" in DATABASE_URL.lower():
+        # Supabase uses self-signed CA chains — "require" enables TLS
+        # without full CA verification (matches sslmode=require).
+        engine_kwargs["connect_args"] = {
+            "ssl": "require",
+        }
+    elif "azure" in DATABASE_URL.lower() or "cloudapp" in DATABASE_URL.lower():
         engine_kwargs["connect_args"] = {
             "ssl": True,
         }

@@ -191,12 +191,13 @@ jobs:
         env:
           DEPLOY_SECRET_KEY: "${{ secrets.SECRET_KEY }}"
           DEPLOY_REG_KEY: "${{ secrets.REGISTRATION_KEY }}"
+          DEPLOY_DATABASE_URL: "${{ secrets.DATABASE_URL }}"
         run: |
           az containerapp update \
             --name "${{ env.CONTAINER_APP_NAME }}" \
             --resource-group "${{ env.RESOURCE_GROUP }}" \
             --image ghcr.io/${{ env.REPOSITORY_LOWER }}:${{ github.sha }} \
-            --set-env-vars "SECRET_KEY=$DEPLOY_SECRET_KEY" "REGISTRATION_KEY=$DEPLOY_REG_KEY"
+            --set-env-vars "SECRET_KEY=$DEPLOY_SECRET_KEY" "REGISTRATION_KEY=$DEPLOY_REG_KEY" "DATABASE_URL=$DEPLOY_DATABASE_URL"
 
       - name: Get deployment URL
         run: |
