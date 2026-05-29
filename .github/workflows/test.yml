@@ -140,7 +140,7 @@ jobs:
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: shoppinglist
+          POSTGRES_DB: shoppinglist_e2e
         ports:
           - 5432:5432
         options: >-
@@ -196,6 +196,7 @@ jobs:
           REGISTER_RATE_LIMIT: "100/minute"
           LOGIN_RATE_LIMIT: "200/minute"
           SHARED_LIST_RATE_LIMIT: "500/minute"
+          DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/shoppinglist_e2e
 
       - name: Run Playwright E2E tests
         # --no-install: use local playwright from node_modules after npm ci, avoid npx cache
