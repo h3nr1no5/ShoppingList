@@ -63,7 +63,7 @@ describe('useOfflineQueue', () => {
       // Add changes with different types
       capturedQueue!.enqueue({ type: 'toggle', itemId: 'item-1', is_checked: true });
       capturedQueue!.enqueue({ type: 'delete', itemId: 'item-2' });
-      capturedQueue!.enqueue({ type: 'edit', itemId: 'item-3', name: 'New Name', quantity: 2 });
+      capturedQueue!.enqueue({ type: 'edit', itemId: 'item-3', name: 'New Name', quantity: 2, unit: 'pcs' });
 
       const pending = capturedQueue!.getPending();
       expect(pending).toHaveLength(3);
@@ -367,7 +367,7 @@ describe('useOfflineQueue', () => {
       expect(capturedQueue).toBeDefined();
 
       const beforeEnqueue = Date.now();
-      capturedQueue!.enqueue({ type: 'add', tempId: 'temp-123', name: 'Test Item', quantity: 2 });
+      capturedQueue!.enqueue({ type: 'add', tempId: 'temp-123', name: 'Test Item', quantity: 2, unit: 'pcs' });
       const afterEnqueue = Date.now();
 
       const pending = capturedQueue!.getPending();

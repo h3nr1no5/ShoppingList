@@ -9,6 +9,7 @@ import { ToastProvider } from '../context/ToastContext';
 import { useToastContext } from '../context/useToastContext';
 import { ApiHealthContext } from '../context/ApiHealthContext';
 import { ToastContainer } from '../components/ToastContainer';
+import { type AxiosResponse } from 'axios';
 
 // Mock the apiClient
 vi.mock('../api/client', async () => {
@@ -62,6 +63,7 @@ const createMockList = (overrides: Partial<ShoppingList> = {}): ShoppingList => 
       list_id: 'list-1',
       name: 'Milk',
       quantity: 2,
+      unit: "pcs",
       is_checked: false,
       sort_order: 0,
       created_at: '2024-01-01T00:00:00Z',
@@ -71,6 +73,7 @@ const createMockList = (overrides: Partial<ShoppingList> = {}): ShoppingList => 
       list_id: 'list-1',
       name: 'Bread',
       quantity: 1,
+      unit: "pcs",
       is_checked: false,
       sort_order: 1,
       created_at: '2024-01-01T00:00:00Z',
@@ -267,6 +270,43 @@ describe('ListDetail - Offline Queue Behavior', () => {
       expect(editChange).toBeDefined();
       expect(editChange.itemId).toBe('item-1');
       expect(editChange.name).toBe('Organic Milk');
+    });
+  });
+
+  describe('Syncing offline changes', () => {
+    it('syncs offline add with unit correctly', async () => {
+      // Pre-populate localStorage with a pending add that has unit "l"
+      const pendingAdd = {
+        type: 'add',
+        id: 'test-change-1',
+        tempId: 'temp-test-1',
+        name: 'Water',
+        quantity: 1,
+        unit: 'l',
+        timestamp: Date.now(),
+      };
+      localStorage.setItem(
+        'pending_changes_list-1',
+        JSON.stringify([pendingAdd])
+      );
+
+      // Mock the API response for the sync (post returns the created item)
+      vi.mocked(apiClientNoRedirect.post).mockResolvedValue({
+        data: { id: 'real-item-1' },
+      } as unknown as AxiosResponse<{ id: string }>);
+
+      renderWithAuth(<ListDetail />, true, true);
+
+      // Wait for the API call to be made during sync
+      await waitFor(() => {
+        expect(apiClientNoRedirect.post).toHaveBeenCalled();
+      });
+
+      // Verify the API call included the correct unit in the payload
+      expect(apiClientNoRedirect.post).toHaveBeenCalledWith(
+        '/lists/list-1/items',
+        { name: 'Water', quantity: 1, unit: 'l' }
+      );
     });
   });
 

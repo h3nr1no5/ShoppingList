@@ -72,7 +72,7 @@ class TestListItemUpdatedAtOnUpdate:
         original_updated_at = test_item.updated_at
         await asyncio.sleep(0.01)
         
-        update_data = ListItemUpdate(quantity=5)
+        update_data = ListItemUpdate(quantity=5.5)
         updated = await update_list_item(db_session, test_item, update_data)
         
         assert updated.updated_at is not None
@@ -95,7 +95,7 @@ class TestListItemUpdatedAtOnUpdate:
         original_updated_at = test_item.updated_at
         await asyncio.sleep(0.01)
         
-        update_data = ListItemUpdate(quantity=3)
+        update_data = ListItemUpdate(quantity=3.5)
         updated = await update_list_item(db_session, test_item, update_data)
         
         assert updated.updated_at is not None
@@ -115,6 +115,7 @@ class TestListItemSchemaUpdatedAt:
             list_id=list_id,
             name="Milk",
             quantity=1,
+            unit="pcs",
             is_checked=False,
             sort_order=0,
             created_at=now,
@@ -131,6 +132,7 @@ class TestListItemSchemaUpdatedAt:
             list_id=list_id,
             name="Milk",
             quantity=1,
+            unit="pcs",
             is_checked=False,
             sort_order=0,
             created_at=now,
@@ -145,7 +147,8 @@ class TestListItemSchemaUpdatedAt:
             id = uuid.uuid4()
             list_id = uuid.uuid4()
             name = "Test Item"
-            quantity = 2
+            quantity = 2.5
+            unit = "pcs"
             is_checked = True
             sort_order = 1
             created_at = now
@@ -154,4 +157,6 @@ class TestListItemSchemaUpdatedAt:
         mock = MockItem()
         data = ListItemResponse.model_validate(mock)
         assert data.name == "Test Item"
+        assert data.quantity == 2.5
+        assert data.unit == "pcs"
         assert data.updated_at == now

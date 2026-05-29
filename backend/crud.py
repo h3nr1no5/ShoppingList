@@ -269,6 +269,7 @@ async def create_list_item(
         list_id=list_id,
         name=item_data.name,
         quantity=item_data.quantity,
+        unit=item_data.unit,
         is_checked=item_data.is_checked,
         sort_order=max_order + 1,
     )

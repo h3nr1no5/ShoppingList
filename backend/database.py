@@ -5,6 +5,7 @@ Handles PostgreSQL connection including Azure PostgreSQL connection string forma
 import logging
 import os
 
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import declarative_base
 
@@ -97,7 +98,7 @@ async def get_db() -> AsyncSession:
 
 async def init_db():
     """
-    Initialize database tables.
+    Initialize database tables and run schema migrations.
     """
     logger.info(f"Initializing database tables... (DATABASE_URL starts with: {DATABASE_URL[:30]}...)")
     try:
@@ -107,6 +108,40 @@ async def init_db():
             logger.info(f"Tables to create (if not exist): {table_names}")
 
             await conn.run_sync(Base.metadata.create_all)
+
+            # ── Backup: snapshot list_items before migration ──
+            logger.info("Creating pre-migration backup of list_items...")
+            await conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS list_items_backup_20260526 AS
+                SELECT * FROM list_items
+            """))
+
+            # ── Migration 1: quantity INTEGER → DOUBLE PRECISION ──
+            logger.info("Running migration: list_items.quantity → DOUBLE PRECISION...")
+            await conn.execute(text("""
+                DO $$
+                BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_name = 'list_items'
+                        AND column_name = 'quantity'
+                        AND data_type = 'double precision'
+                    ) THEN
+                        ALTER TABLE list_items
+                        ALTER COLUMN quantity TYPE DOUBLE PRECISION;
+                        RAISE NOTICE 'quantity column migrated to DOUBLE PRECISION.';
+                    ELSE
+                        RAISE NOTICE 'quantity column already DOUBLE PRECISION – skipping.';
+                    END IF;
+                END $$;
+            """))
+
+            # ── Migration 2: add unit column ──────────────────
+            logger.info("Running migration: adding list_items.unit column...")
+            await conn.execute(text("""
+                ALTER TABLE list_items
+                ADD COLUMN IF NOT EXISTS unit VARCHAR(20) NOT NULL DEFAULT 'pcs';
+            """))
 
         logger.info("SUCCESS: Database tables initialized")
     except Exception as e:

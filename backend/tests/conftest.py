@@ -168,6 +168,7 @@ async def test_item(db_session: AsyncSession, test_list: ShoppingList) -> ListIt
         list_id=test_list.id,
         name="Test Item",
         quantity=2,
+        unit="pcs",
         is_checked=False,
         sort_order=0,
     )

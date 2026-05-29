@@ -131,5 +131,12 @@
   "accessibility": {
     "notifications": "Értesítések",
     "dismiss_notification": "Értesítés elutasítása"
+  },
+  "unit": {
+    "pcs": "db",
+    "L": "L",
+    "kg": "kg",
+    "g": "g",
+    "m": "m"
   }
 }

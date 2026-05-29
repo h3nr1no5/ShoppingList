@@ -49,7 +49,7 @@ const SharedList: React.FC = () => {
           case 'add': {
             const response = await apiClientNoRedirect.post<ListItemType>(
               `/lists/${list.id}/items`,
-              { name: change.name, quantity: change.quantity },
+              { name: change.name, quantity: change.quantity, unit: change.unit },
               { params: { share_code: shareCode } }
             );
             tempIdMap[change.tempId] = response.data.id;
@@ -78,6 +78,7 @@ const SharedList: React.FC = () => {
             await apiClientNoRedirect.put(`/items/${realId}`, {
               name: change.name,
               quantity: change.quantity,
+              unit: change.unit,
             }, { params: { share_code: shareCode } });
             break;
           }
@@ -146,7 +147,7 @@ const SharedList: React.FC = () => {
     }
   }, [loadingList, list, isConnected, syncPendingChanges]);
 
-  const handleAddItem = async (name: string, quantity: number): Promise<void> => {
+  const handleAddItem = async (name: string, quantity: number, unit: string): Promise<void> => {
     if (!list) return;
 
     // Check for duplicate name (case-insensitive)
@@ -165,6 +166,7 @@ const SharedList: React.FC = () => {
       list_id: list.id,
       name,
       quantity,
+      unit,
       is_checked: false,
       sort_order: (list.items ?? []).length,
       created_at: new Date().toISOString(),
@@ -182,6 +184,7 @@ const SharedList: React.FC = () => {
         const response = await apiClientNoRedirect.post<ListItemType>(`/lists/${list.id}/items`, {
           name,
           quantity,
+          unit,
         }, {
           params: { share_code: shareCode },
         });
@@ -197,7 +200,7 @@ const SharedList: React.FC = () => {
         });
       } catch (err: unknown) {
         console.error('Failed to add item:', err);
-        enqueue({ type: 'add', tempId, name, quantity });
+        enqueue({ type: 'add', tempId, name, quantity, unit });
       }
     } else {
       // Queue the change for later sync
@@ -206,6 +209,7 @@ const SharedList: React.FC = () => {
         tempId,
         name,
         quantity,
+        unit,
       });
     }
   };
@@ -280,7 +284,7 @@ const handleDeleteItem = async (itemId: string): Promise<void> => {
     }
   };
 
-const handleEditItem = async (itemId: string, name: string, quantity: number): Promise<void> => {
+const handleEditItem = async (itemId: string, name: string, quantity: number, unit: string): Promise<void> => {
     if (!list) return;
 
     // Check for duplicate name (case-insensitive), excluding current item
@@ -298,7 +302,7 @@ const handleEditItem = async (itemId: string, name: string, quantity: number): P
       return {
         ...prev,
         items: (prev.items ?? []).map(item =>
-          item.id === itemId ? { ...item, name, quantity } : item
+          item.id === itemId ? { ...item, name, quantity, unit } : item
         )
       };
     });
@@ -306,12 +310,12 @@ const handleEditItem = async (itemId: string, name: string, quantity: number): P
     // Fire API in background if connected
     if (isConnected) {
       try {
-        await apiClientNoRedirect.put(`/items/${itemId}`, { name, quantity }, {
+        await apiClientNoRedirect.put(`/items/${itemId}`, { name, quantity, unit }, {
           params: { share_code: shareCode },
         });
       } catch (err: unknown) {
         console.error('Failed to edit item:', err);
-        enqueue({ type: 'edit', itemId, name, quantity });
+        enqueue({ type: 'edit', itemId, name, quantity, unit });
       }
     } else {
       // Queue the change for later sync
@@ -320,6 +324,7 @@ const handleEditItem = async (itemId: string, name: string, quantity: number): P
         itemId,
         name,
         quantity,
+        unit,
       });
     }
   };

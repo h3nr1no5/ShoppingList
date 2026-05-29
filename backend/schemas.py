@@ -91,15 +91,16 @@ class ListItemBase(BaseModel):
     """Base schema for list item."""
     model_config = ConfigDict(from_attributes=True)
     
-    name: str
-    quantity: int = 1
+    name: str = Field(..., max_length=255)
+    quantity: float = 1
+    unit: str = Field(default="pcs", max_length=20)
     is_checked: bool = False
 
 
 class ListItemCreate(ListItemBase):
     """Schema for creating a list item."""
     model_config = ConfigDict(from_attributes=True)
-    quantity: int = Field(1, ge=1, le=9999)
+    quantity: float = Field(default=1, ge=0.1, le=9999)
 
 
 class ListItemUpdate(BaseModel):
@@ -107,7 +108,8 @@ class ListItemUpdate(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     
     name: Optional[str] = Field(None, max_length=255)
-    quantity: Optional[int] = Field(None, ge=1, le=9999)
+    quantity: Optional[float] = Field(default=None, ge=0.1, le=9999)
+    unit: Optional[str] = Field(default=None, max_length=20)
     is_checked: Optional[bool] = None
     sort_order: Optional[int] = Field(None, ge=0)
 

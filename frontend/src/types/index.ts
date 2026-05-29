@@ -18,6 +18,7 @@ export interface ListItem {
   list_id: string;
   name: string;
   quantity: number;
+  unit: string;
   is_checked: boolean;
   sort_order: number;
   created_at: string;

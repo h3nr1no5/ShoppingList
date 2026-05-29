@@ -169,6 +169,7 @@ class TestShoppingListWithItemsResponse:
             list_id=list_id,
             name="Milk",
             quantity=1,
+            unit="pcs",
             is_checked=False,
             sort_order=0,
             created_at=now,
@@ -184,6 +185,7 @@ class TestShoppingListWithItemsResponse:
         )
         assert len(data.items) == 1
         assert data.items[0].name == "Milk"
+        assert data.items[0].unit == "pcs"
 
 
 @pytest.mark.unit
@@ -200,15 +202,28 @@ class TestListItemCreate:
         data = ListItemCreate(name="Milk")
         assert data.name == "Milk"
         assert data.quantity == 1
+        assert data.unit == "pcs"
         assert data.is_checked is False
 
     def test_custom_quantity(self):
-        data = ListItemCreate(name="Eggs", quantity=12)
-        assert data.quantity == 12
+        data = ListItemCreate(name="Eggs", quantity=12.5)
+        assert data.quantity == 12.5
 
     def test_checked_item(self):
         data = ListItemCreate(name="Bread", is_checked=True)
         assert data.is_checked is True
+
+    def test_custom_unit(self):
+        """Accept custom unit values like 'kg'."""
+        data = ListItemCreate(name="Flour", quantity=2.5, unit="kg")
+        assert data.unit == "kg"
+        assert data.quantity == 2.5
+
+    def test_integer_quantity_backward_compat(self):
+        """Integer quantity coerces to float for backward compat."""
+        data = ListItemCreate(name="Sugar", quantity=2, unit="pcs")
+        assert isinstance(data.quantity, float)
+        assert data.quantity == 2.0
 
     def test_missing_name(self):
         with pytest.raises(ValidationError):
@@ -222,8 +237,8 @@ class TestListItemUpdate:
         assert data.name == "New Name"
 
     def test_update_quantity(self):
-        data = ListItemUpdate(quantity=5)
-        assert data.quantity == 5
+        data = ListItemUpdate(quantity=5.5)
+        assert data.quantity == 5.5
 
     def test_update_is_checked(self):
         data = ListItemUpdate(is_checked=True)
@@ -237,18 +252,33 @@ class TestListItemUpdate:
         data = ListItemUpdate()
         assert data.name is None
         assert data.quantity is None
+        assert data.unit is None
         assert data.is_checked is None
         assert data.sort_order is None
 
+    def test_update_unit_only(self):
+        """Test partial update with only unit changed."""
+        data = ListItemUpdate(unit="kg")
+        assert data.unit == "kg"
+        assert data.quantity is None
+        assert data.name is None
+
     def test_update_multiple_fields(self):
-        data = ListItemUpdate(name="Milk", quantity=2, is_checked=True)
+        data = ListItemUpdate(name="Milk", quantity=2.5, is_checked=True, unit="kg")
         assert data.name == "Milk"
-        assert data.quantity == 2
+        assert data.quantity == 2.5
+        assert data.unit == "kg"
         assert data.is_checked is True
 
 
 @pytest.mark.unit
 class TestListItemResponse:
+    class MockItem:
+        """Mock ORM model for testing from_attributes."""
+        def __init__(self, **kwargs):
+            for key, value in kwargs.items():
+                setattr(self, key, value)
+
     def test_valid_response(self):
         now = datetime.now(timezone.utc)
         list_id = uuid.uuid4()
@@ -257,12 +287,33 @@ class TestListItemResponse:
             list_id=list_id,
             name="Milk",
             quantity=1,
+            unit="pcs",
             is_checked=False,
             sort_order=0,
             created_at=now,
         )
         assert data.name == "Milk"
         assert data.list_id == list_id
+        assert data.unit == "pcs"
+
+    def test_from_attributes(self):
+        """Test ListItemResponse with from_attributes for unit and float quantity."""
+        list_id = uuid.uuid4()
+        mock = self.MockItem(
+            id=uuid.uuid4(),
+            name="Test",
+            quantity=2.5,
+            unit="kg",
+            list_id=list_id,
+            is_checked=False,
+            sort_order=0,
+            created_at=datetime(2024, 1, 1, 12, 0),
+            updated_at=datetime(2024, 1, 1, 12, 0),
+            created_by="user-1",
+        )
+        resp = ListItemResponse.model_validate(mock, from_attributes=True)
+        assert resp.quantity == 2.5
+        assert resp.unit == "kg"
 
 
 @pytest.mark.unit

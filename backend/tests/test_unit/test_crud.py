@@ -181,11 +181,19 @@ class TestListItemCrud:
 
     async def test_create_list_item_success(self, db_session, test_list):
         """Creating an item should succeed."""
-        item_data = ListItemCreate(name="Milk", quantity=2)
+        item_data = ListItemCreate(name="Milk", quantity=2.5)
         item = await create_list_item(db_session, test_list.id, item_data)
         assert item.name == "Milk"
-        assert item.quantity == 2
+        assert item.quantity == 2.5
+        assert item.unit == "pcs"
         assert item.list_id == test_list.id
+
+    async def test_create_with_custom_unit(self, db_session, test_list):
+        """Create item with custom unit."""
+        item_data = ListItemCreate(name="Milk", quantity=2.0, unit="l")
+        item = await create_list_item(db_session, test_list.id, item_data)
+        assert item.unit == "l"
+        assert item.name == "Milk"
 
     async def test_create_list_item_default_values(self, db_session, test_list):
         """Creating an item should use default values."""
@@ -234,9 +242,9 @@ class TestListItemCrud:
 
     async def test_update_list_item_quantity(self, db_session, test_item):
         """Updating item quantity should change the quantity."""
-        update_data = ListItemUpdate(quantity=10)
+        update_data = ListItemUpdate(quantity=10.5)
         updated = await update_list_item(db_session, test_item, update_data)
-        assert updated.quantity == 10
+        assert updated.quantity == 10.5
 
     async def test_update_list_item_is_checked(self, db_session, test_item):
         """Updating item is_checked should change the value."""
@@ -247,10 +255,18 @@ class TestListItemCrud:
     async def test_update_list_item_partial(self, db_session, test_item):
         """Partial update should only change specified fields."""
         original_name = test_item.name
-        update_data = ListItemUpdate(quantity=5)
+        update_data = ListItemUpdate(quantity=5.5)
         updated = await update_list_item(db_session, test_item, update_data)
         assert updated.name == original_name
-        assert updated.quantity == 5
+        assert updated.quantity == 5.5
+
+    async def test_update_unit(self, db_session, test_item):
+        """Update item unit only."""
+        update = ListItemUpdate(unit="l")
+        updated = await update_list_item(db_session, test_item, update)
+        assert updated.unit == "l"
+        # other fields unchanged
+        assert updated.name == test_item.name
 
     async def test_delete_list_item(self, db_session, test_item):
         """Deleting an item should remove it."""
