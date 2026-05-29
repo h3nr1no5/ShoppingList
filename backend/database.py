@@ -4,7 +4,6 @@ Handles PostgreSQL connection including Azure PostgreSQL connection string forma
 """
 import logging
 import os
-import ssl
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
@@ -67,27 +66,25 @@ engine_kwargs = {
 }
 if not is_sqlite:
     engine_kwargs["pool_pre_ping"] = True
-    engine_kwargs["pool_size"] = 10
-    engine_kwargs["max_overflow"] = 20
+    pool_size = int(os.getenv("DB_POOL_SIZE", "10"))
+    max_overflow = int(os.getenv("DB_MAX_OVERFLOW", "10"))
+    if pool_size < 1 or pool_size > 100:
+        raise ValueError(f"DB_POOL_SIZE must be 1–100, got {pool_size}")
+    if max_overflow < 0 or max_overflow > 200:
+        raise ValueError(f"DB_MAX_OVERFLOW must be 0–200, got {max_overflow}")
+    engine_kwargs["pool_size"] = pool_size
+    engine_kwargs["max_overflow"] = max_overflow
     # Enable SSL only for Azure PostgreSQL (not for local Docker Postgres)
     # Azure requires SSL, local development does not
-    if "azure" in DATABASE_URL.lower() or "cloudapp" in DATABASE_URL.lower():
+    if "supabase" in DATABASE_URL.lower():
+        # Supabase uses self-signed CA chains — "require" enables TLS
+        # without full CA verification (matches sslmode=require).
+        engine_kwargs["connect_args"] = {
+            "ssl": "require",
+        }
+    elif "azure" in DATABASE_URL.lower() or "cloudapp" in DATABASE_URL.lower():
         engine_kwargs["connect_args"] = {
             "ssl": True,
-        }
-    elif "supabase" in DATABASE_URL.lower():
-        # Supabase uses self-signed certificates; require encryption but skip verification
-        logger.warning(
-            "SUPABASE DETECTED: SSL certificate verification is DISABLED. "
-            "Connection is encrypted (TLS) but NOT authenticated against a CA. "
-            "This exposes the connection to potential MITM attacks. "
-            "Use only for local development against Supabase."
-        )
-        ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-        ssl_context.check_hostname = False
-        ssl_context.verify_mode = ssl.CERT_NONE
-        engine_kwargs["connect_args"] = {
-            "ssl": ssl_context,
         }
 
 engine = create_async_engine(DATABASE_URL, **engine_kwargs)
