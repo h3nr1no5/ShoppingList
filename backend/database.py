@@ -4,6 +4,7 @@ Handles PostgreSQL connection including Azure PostgreSQL connection string forma
 """
 import logging
 import os
+import ssl
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
@@ -73,6 +74,20 @@ if not is_sqlite:
     if "azure" in DATABASE_URL.lower() or "cloudapp" in DATABASE_URL.lower():
         engine_kwargs["connect_args"] = {
             "ssl": True,
+        }
+    elif "supabase" in DATABASE_URL.lower():
+        # Supabase uses self-signed certificates; require encryption but skip verification
+        logger.warning(
+            "SUPABASE DETECTED: SSL certificate verification is DISABLED. "
+            "Connection is encrypted (TLS) but NOT authenticated against a CA. "
+            "This exposes the connection to potential MITM attacks. "
+            "Use only for local development against Supabase."
+        )
+        ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        ssl_context.check_hostname = False
+        ssl_context.verify_mode = ssl.CERT_NONE
+        engine_kwargs["connect_args"] = {
+            "ssl": ssl_context,
         }
 
 engine = create_async_engine(DATABASE_URL, **engine_kwargs)

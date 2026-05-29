@@ -6,6 +6,7 @@ from typing import AsyncGenerator
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 
 # Set secrets BEFORE importing the app
@@ -18,7 +19,15 @@ load_dotenv()
 # Use PostgreSQL for tests
 TEST_DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+asyncpg://postgres:postgres@localhost:5432/shoppinglist")
 
+import uuid
+TEST_SCHEMA = f"test_{uuid.uuid4().hex[:8]}"
+
 from database import get_db, Base
+
+# Assign test schema to all tables so generated SQL uses explicit schema-qualified names.
+# This is more reliable than SET search_path which doesn't persist across pool connections.
+for table in Base.metadata.tables.values():
+    table.schema = TEST_SCHEMA
 from models import User, ShoppingList, ListItem
 from auth import get_password_hash, create_access_token
 from main import app
@@ -28,7 +37,7 @@ from sqlalchemy.pool import NullPool
 
 engine = create_async_engine(
     TEST_DATABASE_URL,
-    echo=False,
+    echo=os.getenv("SQL_ECHO", "false").lower() == "true",
     poolclass=NullPool,
     pool_pre_ping=True,
 )
@@ -38,16 +47,19 @@ TestSessionLocal = async_sessionmaker(
     expire_on_commit=False,
 )
 
+
 # Create tables for each test
 @pytest.fixture(autouse=True)
 async def setup_database(request):
-    """Create all tables before test and drop after, only if test needs PostgreSQL."""
+    """Create schema and tables before test, drop after, only if test needs PostgreSQL."""
     if request.node.get_closest_marker("postgresql"):
         async with engine.begin() as conn:
+            await conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {TEST_SCHEMA}"))
             await conn.run_sync(Base.metadata.create_all)
         yield
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.drop_all)
+            await conn.execute(text(f"DROP SCHEMA IF EXISTS {TEST_SCHEMA} CASCADE"))
     else:
         yield
 
