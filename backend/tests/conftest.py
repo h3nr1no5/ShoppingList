@@ -23,12 +23,12 @@ import uuid
 TEST_SCHEMA = f"test_{uuid.uuid4().hex[:8]}"
 
 from database import get_db, Base
+from models import User, ShoppingList, ListItem
 
 # Assign test schema to all tables so generated SQL uses explicit schema-qualified names.
 # This is more reliable than SET search_path which doesn't persist across pool connections.
 for table in Base.metadata.tables.values():
     table.schema = TEST_SCHEMA
-from models import User, ShoppingList, ListItem
 from auth import get_password_hash, create_access_token
 from main import app
 
