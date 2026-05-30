@@ -516,7 +516,7 @@ async def delete_item(
 # ==================== Health Check ====================
 
 
-@app.get("/health", tags=["health"])
+@app.api_route("/health", methods=["GET", "OPTIONS"], tags=["health"])
 async def health_check(db: AsyncSession = Depends(get_db)):
     """
     Readiness health check endpoint.

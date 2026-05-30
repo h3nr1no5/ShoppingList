@@ -36,6 +36,7 @@ backend/logs/
 
 # OS
 .DS_Store
+notes
 
 # db
 *.sql
