@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.42.1.51946",
-      "templateHash": "15978998592919654661"
+      "templateHash": "17444687171621171266"
     }
   },
   "parameters": {
@@ -73,6 +73,19 @@
       "type": "securestring",
       "metadata": {
         "description": "REGISTRATION_KEY for invite-only registration"
+      }
+    },
+    "resendApiKey": {
+      "type": "securestring",
+      "metadata": {
+        "description": "RESEND_API_KEY for sending password reset emails"
+      }
+    },
+    "fromEmail": {
+      "type": "string",
+      "defaultValue": "noreply@shoppinglist.app",
+      "metadata": {
+        "description": "FROM_EMAIL address for password reset emails"
       }
     }
   },
@@ -143,6 +156,14 @@
                 {
                   "name": "STATIC_DIR",
                   "value": "static"
+                },
+                {
+                  "name": "RESEND_API_KEY",
+                  "value": "[parameters('resendApiKey')]"
+                },
+                {
+                  "name": "FROM_EMAIL",
+                  "value": "[parameters('fromEmail')]"
                 }
               ],
               "probes": [
@@ -207,11 +228,14 @@
     {
       "type": "Microsoft.DBforPostgreSQL/flexibleServers/firewallRules",
       "apiVersion": "2023-03-01-preview",
-      "name": "[format('{0}-postgres/AllowAzureServices', parameters('envName'))]",
+      "name": "[format('{0}/{1}', format('{0}-postgres', parameters('envName')), 'AllowAzureServices')]",
       "properties": {
         "startIpAddress": "0.0.0.0",
         "endIpAddress": "0.0.0.0"
-      }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', format('{0}-postgres', parameters('envName')))]"
+      ]
     }
   ],
   "outputs": {

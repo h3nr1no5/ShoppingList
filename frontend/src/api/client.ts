@@ -90,3 +90,26 @@ export async function generateShareLink(listId: string): Promise<string> {
   const data = await response.json();
   return data.share_code;
 }
+
+export async function forgotPassword(email: string): Promise<void> {
+  const response = await authFetch('/auth/forgot-password', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to send reset email');
+  }
+}
+
+export async function resetPassword(token: string, password: string): Promise<void> {
+  const response = await authFetch('/auth/reset-password', {
+    method: 'POST',
+    body: JSON.stringify({ token, password }),
+  });
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.detail || 'Failed to reset password');
+  }
+}

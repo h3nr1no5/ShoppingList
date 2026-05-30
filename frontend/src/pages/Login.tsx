@@ -114,6 +114,12 @@ const Login: React.FC = () => {
           </button>
         </form>
 
+        <p className="auth-forgot-password">
+          <Link to="/forgot-password" className="auth-link">
+            {t('auth.forgot_password')}
+          </Link>
+        </p>
+
         <p className="auth-footer">
           {t('auth.dont_have_account')}{' '}
           <Link to="/register" className="auth-link">

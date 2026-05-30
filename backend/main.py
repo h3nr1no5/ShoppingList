@@ -20,6 +20,8 @@ logging.basicConfig(
 REGISTER_RATE_LIMIT = os.getenv("REGISTER_RATE_LIMIT", "5/minute")
 LOGIN_RATE_LIMIT = os.getenv("LOGIN_RATE_LIMIT", "10/minute")
 SHARED_LIST_RATE_LIMIT = os.getenv("SHARED_LIST_RATE_LIMIT", "30/minute")
+FORGOT_PASSWORD_RATE_LIMIT = os.getenv("FORGOT_PASSWORD_RATE_LIMIT", "3/minute")
+RESET_PASSWORD_RATE_LIMIT = os.getenv("RESET_PASSWORD_RATE_LIMIT", "5/minute")
 
 
 logger = logging.getLogger(__name__)
@@ -43,6 +45,8 @@ from models import User, ShoppingList, ListItem
 from schemas import (
     UserCreate,
     TokenResponse,
+    ForgotPasswordRequest,
+    ResetPasswordRequest,
     ShoppingListCreate,
     ShoppingListUpdate,
     ShoppingListResponse,
@@ -58,10 +62,15 @@ from auth import (
     get_current_user,
     get_current_user_optional,
     create_access_token,
+    create_password_reset_token,
+    verify_password_reset_token,
+    get_password_hash,
 )
 from crud import (
     create_user,
     authenticate_user,
+    get_user_by_email,
+    update_password,
     create_shopping_list,
     get_user_lists,
     get_list_by_id,
@@ -256,6 +265,99 @@ async def login(
 
     access_token = create_access_token(user.id, user.email)
     return TokenResponse(access_token=access_token)
+
+
+@app.post("/api/auth/forgot-password", response_model=MessageResponse, tags=["auth"])
+@limiter.limit(FORGOT_PASSWORD_RATE_LIMIT)
+async def forgot_password(
+    request: Request,
+    data: ForgotPasswordRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Request a password reset email.
+    Always returns 200 to prevent email enumeration.
+    If the email exists, sends a reset link via Resend.
+    """
+    user = await get_user_by_email(db, data.email)
+
+    if user:
+        # Generate reset token (15 min expiry)
+        reset_token = create_password_reset_token(user.email)
+
+        # Get frontend URL from env (default for local dev)
+        frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
+        reset_link = f"{frontend_url}/reset-password/{reset_token}"
+
+        # Send email via Resend
+        resend_api_key = os.getenv("RESEND_API_KEY")
+        from_email = os.getenv("FROM_EMAIL", "noreply@example.com")
+
+        if resend_api_key:
+            try:
+                import resend
+                resend.api_key = resend_api_key
+
+                params = {
+                    "from": from_email,
+                    "to": [user.email],
+                    "subject": "Reset your Shopping List password",
+                    "html": f"""
+                        <p>You requested a password reset.</p>
+                        <p>Click the link below to reset your password. This link expires in 15 minutes.</p>
+                        <p><a href="{reset_link}">{reset_link}</a></p>
+                        <p>If you didn't request this, you can ignore this email.</p>
+                    """,
+                }
+                await resend.Emails.send_async(params)
+                logger.info("Password reset email sent to %s", user.email)
+            except Exception as e:
+                logger.error("Failed to send reset email to %s: %s", user.email, e)
+        else:
+            # Fallback: log minimal info (useful for development)
+            # NOTE: reset_link is intentionally NOT logged to avoid leaking the JWT
+            # into server logs. Developers should check the application logs for
+            # the email address if a reset link wasn't received.
+            logger.info(
+                "Password reset link generated for %s (RESEND_API_KEY not set)",
+                user.email,
+            )
+
+    return MessageResponse(
+        message="If an account with that email exists, a password reset link has been sent."
+    )
+
+
+@app.post("/api/auth/reset-password", response_model=MessageResponse, tags=["auth"])
+@limiter.limit(RESET_PASSWORD_RATE_LIMIT)
+async def reset_password(
+    request: Request,
+    data: ResetPasswordRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Reset password using a valid reset token.
+    """
+    # Verify token and extract email
+    email = verify_password_reset_token(data.token)
+    if not email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired reset token",
+        )
+
+    # Hash new password and update
+    new_password_hash = get_password_hash(data.password)
+    success = await update_password(db, email, new_password_hash)
+
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User not found",
+        )
+
+    logger.info("Password reset successful for %s", email)
+    return MessageResponse(message="Password has been reset successfully. You can now log in with your new password.")
 
 
 # ==================== List Routes ====================

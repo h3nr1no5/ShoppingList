@@ -5,7 +5,15 @@ import uuid
 import pytest
 from jose import jwt
 
-from auth import get_password_hash, verify_password, create_access_token, ALGORITHM, SECRET_KEY
+from auth import (
+    get_password_hash,
+    verify_password,
+    create_access_token,
+    create_password_reset_token,
+    verify_password_reset_token,
+    ALGORITHM,
+    SECRET_KEY,
+)
 
 
 @pytest.mark.unit
@@ -92,3 +100,91 @@ class TestCreateAccessToken:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         assert payload["sub"] == str(user_id)
         assert payload["email"] == ""
+
+
+@pytest.mark.unit
+class TestPasswordResetTokens:
+    """Tests for password reset token creation and verification."""
+
+    def test_create_reset_token_returns_string(self):
+        """Token should be a non-empty string."""
+        token = create_password_reset_token("test@example.com")
+        assert isinstance(token, str)
+        assert len(token) > 0
+
+    def test_create_reset_token_contains_email(self):
+        """Token should contain the email as subject."""
+        email = "test@example.com"
+        token = create_password_reset_token(email)
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        assert payload["sub"] == email
+
+    def test_create_reset_token_contains_purpose(self):
+        """Token should have purpose: password_reset."""
+        token = create_password_reset_token("test@example.com")
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        assert payload["purpose"] == "password_reset"
+
+    def test_create_reset_token_contains_expiry(self):
+        """Token should contain an expiry timestamp."""
+        token = create_password_reset_token("test@example.com")
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        assert "exp" in payload
+
+    def test_verify_reset_token_valid(self):
+        """Valid reset token should return the email."""
+        email = "test@example.com"
+        token = create_password_reset_token(email)
+        result = verify_password_reset_token(token)
+        assert result == email
+
+    def test_verify_reset_token_expired(self):
+        """Expired reset token should return None."""
+        from datetime import datetime, timedelta, timezone
+        past_expire = datetime.now(timezone.utc) - timedelta(hours=1)
+        payload = {
+            "sub": "test@example.com",
+            "exp": past_expire,
+            "purpose": "password_reset",
+        }
+        token = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+        result = verify_password_reset_token(token)
+        assert result is None
+
+    def test_verify_reset_token_wrong_purpose(self):
+        """Token with wrong purpose should return None."""
+        from datetime import datetime, timedelta, timezone
+        future_expire = datetime.now(timezone.utc) + timedelta(hours=1)
+        payload = {
+            "sub": "test@example.com",
+            "exp": future_expire,
+            "purpose": "email_verification",
+        }
+        token = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+        result = verify_password_reset_token(token)
+        assert result is None
+
+    def test_verify_reset_token_malformed(self):
+        """Malformed token should return None."""
+        result = verify_password_reset_token("not-a-valid-jwt-token")
+        assert result is None
+
+    def test_verify_access_token_as_reset(self):
+        """An access token passed to verify_reset_token should return None."""
+        access_token = create_access_token(uuid.uuid4(), "test@example.com")
+        result = verify_password_reset_token(access_token)
+        assert result is None
+
+    def test_verify_reset_token_wrong_secret(self):
+        """Token signed with different key should return None."""
+        from datetime import datetime, timedelta, timezone
+        other_secret = "this-is-a-different-secret-key-for-testing-only"
+        future_expire = datetime.now(timezone.utc) + timedelta(minutes=15)
+        payload = {
+            "sub": "test@example.com",
+            "exp": future_expire,
+            "purpose": "password_reset",
+        }
+        token = jwt.encode(payload, other_secret, algorithm=ALGORITHM)
+        result = verify_password_reset_token(token)
+        assert result is None
