@@ -201,8 +201,14 @@ class TestTokenExpiry:
 class TestPasswordResetSecurity:
     """Security tests for password reset functionality."""
 
-    async def test_forgot_password_no_email_enumeration(self, client: AsyncClient, test_user):
+    async def test_forgot_password_no_email_enumeration(self, client: AsyncClient, test_user, monkeypatch):
         """Both existing and non-existing emails should return identical response body."""
+        import main as app_module
+
+        # Disable rate limiting for this test to avoid interference from
+        # previous tests that consumed the rate limit budget (3/minute)
+        monkeypatch.setattr(app_module.limiter, "enabled", False)
+
         # Request for existing user
         response_existing = await client.post(
             "/api/auth/forgot-password",
