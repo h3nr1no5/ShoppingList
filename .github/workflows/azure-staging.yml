@@ -106,6 +106,7 @@ jobs:
           ACI_REG_KEY: "${{ secrets.REGISTRATION_KEY }}"
           ACI_DATABASE_URL: "${{ secrets.DATABASE_URL }}"
           ACI_REGISTRY_PASSWORD: "${{ secrets.GHCR_PAT }}"
+          ACI_RESEND_KEY: "${{ secrets.RESEND_API_KEY }}"
         run: |
           az container create \
             --resource-group "${{ env.RESOURCE_GROUP }}" \
@@ -122,6 +123,8 @@ jobs:
               "REGISTER_RATE_LIMIT=100/minute" \
               "LOGIN_RATE_LIMIT=200/minute" \
               "SHARED_LIST_RATE_LIMIT=500/minute" \
+              "RESEND_API_KEY=$ACI_RESEND_KEY" \
+              "FROM_EMAIL=noreply@shoppinglist.app" \
             --os-type Linux \
             --ip-address Public \
             --ports 8000 \

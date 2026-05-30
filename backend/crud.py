@@ -76,6 +76,21 @@ async def get_user_by_id(db: AsyncSession, user_id: uuid.UUID) -> Optional[User]
     return result.scalar_one_or_none()
 
 
+async def update_password(db: AsyncSession, email: str, new_password_hash: str) -> bool:
+    """
+    Update user's password hash. Returns True if user was found and updated, False otherwise.
+    """
+    result = await db.execute(select(User).where(User.email == email))
+    user = result.scalar_one_or_none()
+    if not user:
+        return False
+    
+    user.password_hash = new_password_hash
+    await db.commit()
+    await db.refresh(user)
+    return True
+
+
 # ==================== Shopping List CRUD ====================
 
 

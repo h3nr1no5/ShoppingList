@@ -35,6 +35,17 @@ class TokenData(BaseModel):
     user_id: Optional[uuid.UUID] = None
 
 
+class ForgotPasswordRequest(BaseModel):
+    """Schema for forgot password request."""
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    """Schema for password reset."""
+    token: str
+    password: str = Field(..., min_length=8, max_length=128)
+
+
 # ==================== List Schemas ====================
 
 
