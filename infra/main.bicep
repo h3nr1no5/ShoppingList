@@ -116,10 +116,6 @@ resource app 'Microsoft.App/containerApps@2023-05-01' = {
               name: 'FROM_EMAIL'
               value: fromEmail
             }
-            {
-              name: 'FRONTEND_URL'
-              value: 'https://${app.properties.configuration.ingress.fqdn}'
-            }
           ]
           probes: [
             {
@@ -186,7 +182,8 @@ resource postgresServer 'Microsoft.DBforPostgreSQL/flexibleServers@2023-03-01-pr
 
 // PostgreSQL firewall rule to allow Azure services
 resource postgresFirewallRule 'Microsoft.DBforPostgreSQL/flexibleServers/firewallRules@2023-03-01-preview' = {
-  name: '${envName}-postgres/AllowAzureServices'
+  parent: postgresServer
+  name: 'AllowAzureServices'
   properties: {
     startIpAddress: '0.0.0.0'
     endIpAddress: '0.0.0.0'
