@@ -127,7 +127,7 @@ jobs:
             -H "Content-Type: application/json" \
             -d "{
               \"imageUrl\": \"ghcr.io/${{ env.REPOSITORY_LOWER }}:pr-${{ github.event.number }}\",
-              \"clearCache\": false
+              \"clearCache\": \"do_not_clear\"
             }"
 
       - name: Wait for deploy to complete

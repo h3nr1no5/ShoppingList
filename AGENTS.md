@@ -148,3 +148,43 @@ azd provision
 - `infra/main.bicep` — Azure infrastructure (single container app)
 - `backend/scripts/migrate_float_unit.sh` — DB migration for float quantity + unit column
 - `backend/scripts/e2e_db_clean.sh` — drops and recreates the `shoppinglist_e2e` database
+
+## Render Deployment
+
+Preview/staging deployments happen on Render for PRs targeting `dev`.
+
+### CI/CD Setup
+
+`.github/workflows/deploy-render.yml` triggers on PRs to `dev`:
+1. Tests (backend pytest + frontend lint/build/test)
+2. Builds Docker image → pushes to `ghcr.io` tagged `pr-<number>`
+3. Triggers Render deploy via `POST /v1/services/{serviceId}/deploys`
+4. Polls until deploy is live (up to 15 minutes)
+5. Runs smoke tests (Python) + Playwright E2E against staging
+
+### Prerequisites (Render Dashboard)
+
+1. **Create API key** — Account Settings → API Keys → Create
+2. **Create Web Service** — New Web Service → tab "Existing Image"
+   - Image URL: `ghcr.io/h3nr1no5/shoppinglist`
+   - Registry credential: GitHub username + `GHCR_PAT` as password
+   - Port: `8000`
+   - Add env vars: `SECRET_KEY`, `DATABASE_URL`, `REGISTRATION_KEY`, `RESEND_API_KEY`
+3. **Deploy once** to create the service
+4. **Copy service ID** from dashboard URL (`/services/srv-xxxxx`)
+5. **Copy app URL** — `https://your-app.onrender.com`
+
+### GitHub Secrets
+
+| Secret | Source |
+|--------|--------|
+| `RENDER_API_KEY` | Render Account Settings → API Keys |
+| `RENDER_SERVICE_ID` | Render dashboard URL (`srv-xxxxx`) |
+| `RENDER_APP_URL` (variable) | Staging app URL, e.g. `https://shoppinglist-staging.onrender.com` |
+
+### Notes
+
+- The service must be **image-backed** (not Git-backed) for the `imageUrl` API parameter to work.
+- The `imageUrl` host/repo/name must match the service's configured image.
+- Render autodeploy is disabled — deploys are triggered exclusively via the API from CI/CD.
+- Deploy hook (simple `curl` to a Render-generated URL) is an alternative but the API approach was chosen for consistency with existing Azure workflows.
