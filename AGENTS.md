@@ -13,7 +13,7 @@ cd backend && bash stop.sh       # kills uvicorn
 cd frontend && bash run.sh       # installs deps + Vite dev server on :5173
 ```
 
-> **Password reset in development:** Password reset emails are sent via Resend.com. In dev, if `RESEND_API_KEY` is not set, the reset link is logged to the backend server console instead. You can test the password reset flow locally by watching the backend logs.
+> **Password reset (hidden):** Password reset UI is hidden — not in working state yet. Planned for future implementation. Backend endpoints remain; tests are skipped via `@pytest.mark.skip`.
 
 ## Migration (quantity float + unit)
 ```bash
@@ -65,9 +65,7 @@ cd frontend && npm run lint    # eslint
 - **Static files mounting checks for directory** — `main.py` checks if the static directory exists before mounting (allows running backend without built frontend in development).
 - **Quantity is now FLOAT** — `ListItem.quantity` is `Float` (was `Integer`). Frontend uses `parseFloat`. Range: 0.1–9999. Backward compatible — integer values still accepted.
 - **Items have a unit field** — `ListItem.unit` (VARCHAR(20), default `"pcs"`). Display: `{quantity} {unit}` when unit is set (e.g. `2 kg`, `1 pcs`). Falls back to `x{quantity}` when unit is empty.
-- **`RESEND_API_KEY` required for password reset emails** — Forgot-password endpoint uses Resend.com to send reset emails. If `RESEND_API_KEY` is not set, the reset link is logged to the server console instead (useful for development).
-- **Password reset token expires in 15 minutes** — Reset tokens are short-lived JWTs with `purpose: "password_reset"` claim. Configurable via `RESET_TOKEN_EXPIRE_MINUTES` env var.
-- **`FRONTEND_URL` configures reset link domain** — The base URL used to build password reset links. Defaults to `http://localhost:5173`. Must point to the frontend application URL.
+- **Password reset UI is hidden** — Not in working state yet. Planned for future implementation. Backend endpoints and tests remain in place (skipped via `@pytest.mark.skip`).
 
 ## Architecture
 
@@ -82,29 +80,9 @@ cd frontend && npm run lint    # eslint
 - `database.py` detects Azure URLs by checking for `azure` or `cloudapp` in connection string → enables SSL
 - Frontend calls `/api/*` directly (same-origin); no separate API URL needed in production
 
-### Password Reset Flow
+### Password Reset (Planned)
 
-1. User clicks "Forgot Password?" on the login page → navigates to `/forgot-password`
-2. User enters email → frontend calls `POST /api/auth/forgot-password`
-3. Backend always returns `{"message": "If an account with that email exists, a password reset link has been sent."}` (prevents email enumeration)
-4. If email exists, backend generates a 15-minute JWT reset token and sends it via Resend.com email
-5. User clicks the link in the email → navigates to `/reset-password/:token`
-6. User enters new password → frontend calls `POST /api/auth/reset-password`
-7. Backend validates the token, hashes the new password, updates the database
-8. User is redirected to login with success message
-
-**Rate limits:** Forgot-password is rate-limited to 3 requests/minute per IP (configurable via `FORGOT_PASSWORD_RATE_LIMIT`). Reset-password is rate-limited to 5 requests/minute per IP (configurable via `RESET_PASSWORD_RATE_LIMIT`).
-
-### Password Reset Env Vars
-
-| Env Var | Default | Description |
-|---------|---------|-------------|
-| `RESEND_API_KEY` | — | Resend.com API key for sending password reset emails |
-| `FROM_EMAIL` | `noreply@example.com` | Sender email address for password reset emails |
-| `FRONTEND_URL` | `http://localhost:5173` | Frontend URL used when building password reset links |
-| `RESET_TOKEN_EXPIRE_MINUTES` | `15` | Password reset JWT expiry in minutes |
-| `FORGOT_PASSWORD_RATE_LIMIT` | `3/minute` | Rate limit for forgot-password endpoint |
-| `RESET_PASSWORD_RATE_LIMIT` | `5/minute` | Rate limit for reset-password endpoint |
+Password reset UI is hidden — not in working state yet. Backend endpoints, auth code, and tests remain in place (skipped via `@pytest.mark.skip`) for future re-enabling. To restore: uncomment route definitions in `frontend/src/App.tsx`, the "Forgot Password?" link in `frontend/src/pages/Login.tsx`, and remove the `@pytest.mark.skip` decorators from the three test classes. |
 
 ## Azure Deployment
 
