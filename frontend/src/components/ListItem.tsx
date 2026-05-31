@@ -129,7 +129,7 @@ const ListItem: React.FC<ListItemProps> = ({ item, onToggle, onDelete, onEdit })
             {item.name}
           </span>
           {item.unit ? (
-            <span className="item-quantity">{item.quantity} {item.unit}</span>
+            <span className="item-quantity">{item.quantity} {t(`unit.${item.unit as typeof UNIT_OPTIONS[number]}`)}</span>
           ) : item.quantity > 1 && (
             <span className="item-quantity">x{item.quantity}</span>
           )}
