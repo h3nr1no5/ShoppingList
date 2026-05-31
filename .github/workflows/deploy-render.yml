@@ -1,0 +1,228 @@
+name: Render — Staging
+
+on:
+  pull_request:
+    branches: [dev]
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: render-staging-${{ github.head_ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  test:
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: shoppinglist
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Create virtual environment
+        working-directory: backend
+        run: python -m venv venv
+
+      - name: Install dependencies
+        working-directory: backend
+        run: |
+          source venv/bin/activate
+          pip install -r requirements.txt
+
+      - name: Run backend tests
+        working-directory: backend
+        run: |
+          source venv/bin/activate
+          pytest -v -m "postgresql"
+        env:
+          SECRET_KEY: test-secret-key-for-ci
+          REGISTRATION_KEY: test-registration-key
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run linter
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Run frontend tests
+        working-directory: frontend
+        run: npm run test:run
+        env:
+          VITE_API_URL: ""
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+  deploy-staging:
+    needs: test
+    runs-on: ubuntu-latest
+    if: |
+      github.actor != 'dependabot[bot]' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Log in to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_PAT }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Set lowercase repository name
+        run: echo "REPOSITORY_LOWER=${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ghcr.io/${{ env.REPOSITORY_LOWER }}:pr-${{ github.event.number }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Trigger Render deploy
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+        run: |
+          curl -s --fail -X POST \
+            "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys" \
+            -H "Authorization: Bearer $RENDER_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"imageUrl\": \"ghcr.io/${{ env.REPOSITORY_LOWER }}:pr-${{ github.event.number }}\",
+              \"clearCache\": false
+            }"
+
+      - name: Wait for deploy to complete
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+        run: |
+          MAX_ATTEMPTS=90
+          ATTEMPT=0
+          while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+            DEPLOYS=$(curl -s --fail \
+              "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys?limit=1" \
+              -H "Authorization: Bearer $RENDER_API_KEY")
+            STATUS=$(echo "$DEPLOYS" | python3 -c "
+            import sys, json
+            try:
+                d = json.load(sys.stdin)
+                print(d[0]['status'] if d else 'unknown')
+            except Exception:
+                print('error')
+            ")
+            if [ "$STATUS" = "live" ]; then
+              echo "Deploy is live"
+              exit 0
+            elif [ "$STATUS" = "failed" ]; then
+              echo "ERROR: Deploy failed"
+              exit 1
+            fi
+            ATTEMPT=$((ATTEMPT + 1))
+            echo "Attempt $ATTEMPT/$MAX_ATTEMPTS: status=$STATUS, waiting..."
+            sleep 10
+          done
+          echo "ERROR: Deploy did not complete within $((MAX_ATTEMPTS * 10)) seconds"
+          exit 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Run smoke tests
+        env:
+          SMOKE_BASE_URL: "${{ vars.RENDER_APP_URL }}"
+          SMOKE_REGISTRATION_KEY: "${{ secrets.REGISTRATION_KEY }}"
+        run: |
+          for i in 1 2 3; do
+            if python backend/smoke_test.py; then
+              echo "Smoke tests passed"
+              exit 0
+            fi
+            echo "Smoke test attempt $i failed, retrying in 15s..."
+            sleep 15
+          done
+          echo "Smoke tests failed after 3 attempts"
+          exit 1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Install Playwright browsers
+        working-directory: frontend
+        run: npx --no-install playwright install --with-deps chromium
+
+      - name: Run Playwright E2E against staging
+        timeout-minutes: 15
+        working-directory: frontend
+        env:
+          E2E_BASE_URL: ${{ vars.RENDER_APP_URL }}
+          E2E_API_BASE_URL: ${{ vars.RENDER_APP_URL }}/api
+          E2E_INVITE_CODE: ${{ secrets.REGISTRATION_KEY }}
+          E2E_AUTH_FILE: ./e2e/.auth/user.json
+        run: |
+          for i in 1 2 3; do
+            if npx playwright test --config=playwright.deploy.config.ts; then
+              echo "Playwright E2E tests passed on attempt $i"
+              exit 0
+            fi
+            echo "Playwright attempt $i failed, retrying in 15s..."
+            sleep 15
+          done
+          echo "Playwright E2E tests failed after 3 attempts"
+          exit 1
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: playwright-deploy-report-pr-${{ github.event.number }}
+          path: frontend/playwright-deploy-report/
+          retention-days: 7
