@@ -22,6 +22,7 @@ LOGIN_RATE_LIMIT = os.getenv("LOGIN_RATE_LIMIT", "10/minute")
 SHARED_LIST_RATE_LIMIT = os.getenv("SHARED_LIST_RATE_LIMIT", "30/minute")
 FORGOT_PASSWORD_RATE_LIMIT = os.getenv("FORGOT_PASSWORD_RATE_LIMIT", "3/minute")
 RESET_PASSWORD_RATE_LIMIT = os.getenv("RESET_PASSWORD_RATE_LIMIT", "5/minute")
+DELETE_ACCOUNT_RATE_LIMIT = os.getenv("DELETE_ACCOUNT_RATE_LIMIT", "5/minute")
 
 
 logger = logging.getLogger(__name__)
@@ -47,6 +48,7 @@ from schemas import (
     TokenResponse,
     ForgotPasswordRequest,
     ResetPasswordRequest,
+    DeleteAccountRequest,
     ShoppingListCreate,
     ShoppingListUpdate,
     ShoppingListResponse,
@@ -59,18 +61,24 @@ from schemas import (
     ErrorResponse,
 )
 from auth import (
+    CachedUser,
+)
+from auth import (
     get_current_user,
     get_current_user_optional,
     create_access_token,
     create_password_reset_token,
     verify_password_reset_token,
     get_password_hash,
+    verify_password,
 )
 from crud import (
     create_user,
     authenticate_user,
     get_user_by_email,
+    get_user_by_id,
     update_password,
+    delete_user,
     create_shopping_list,
     get_user_lists,
     get_list_by_id,
@@ -358,6 +366,50 @@ async def reset_password(
 
     logger.info("Password reset successful for %s", email)
     return MessageResponse(message="Password has been reset successfully. You can now log in with your new password.")
+
+
+@app.delete("/api/auth/me", response_model=MessageResponse, tags=["auth"])
+@limiter.limit(DELETE_ACCOUNT_RATE_LIMIT)
+async def delete_my_account(
+    request: Request,
+    delete_data: DeleteAccountRequest,
+    current_user: CachedUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Delete the authenticated user's account and all owned data.
+    Requires password confirmation.
+    Cascade-deletes all owned shopping lists and their items.
+
+    Note: The 404 fallback handles a TOCTOU race condition where
+    a concurrent request may have already deleted the user between
+    get_current_user's existence check and the full User load.
+    """
+    user = await get_user_by_id(db, current_user.id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+
+    # Require password confirmation for this destructive operation
+    if not verify_password(delete_data.password, user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Password confirmation failed",
+        )
+
+    try:
+        await delete_user(db, user)
+    except Exception:
+        # Gracefully handle concurrent deletion (race condition)
+        logger.warning("Concurrent deletion detected for user %s", current_user.id)
+
+    logger.warning(
+        "Account deleted: user_id=%s email=%s",
+        current_user.id, current_user.email,
+    )
+    return MessageResponse(message="Account deleted successfully")
 
 
 # ==================== List Routes ====================

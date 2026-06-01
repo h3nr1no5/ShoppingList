@@ -1,0 +1,49 @@
+name: Monitor — Render
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  health-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check /health endpoint with retries
+        env:
+          BASE_URL: ${{ vars.RENDER_APP_URL_PROD }}
+        run: |
+          URL="$BASE_URL/health"
+          MAX_ATTEMPTS=4
+          DELAY=15
+
+          # Retry loop: up to MAX_ATTEMPTS attempts with DELAY seconds between each
+          for i in $(seq 1 $MAX_ATTEMPTS); do
+            echo "Attempt $i of $MAX_ATTEMPTS — curling $URL"
+
+            # Capture both the HTTP status code and the response body
+            BODY=$(curl -s --max-time 10 "$URL")
+            STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$URL")
+
+            if [ "$STATUS_CODE" = "200" ]; then
+              echo "PASS — HTTP $STATUS_CODE"
+              echo "Response: $BODY"
+              exit 0
+            fi
+
+            echo "FAIL — HTTP $STATUS_CODE (attempt $i)"
+            echo "Response: $BODY"
+
+            if [ "$i" -lt "$MAX_ATTEMPTS" ]; then
+              echo "Retrying in ${DELAY}s..."
+              sleep $DELAY
+            fi
+          done
+
+          # All attempts exhausted — exit with failure
+          echo "Health check FAILED after $MAX_ATTEMPTS attempts"
+          exit 1
