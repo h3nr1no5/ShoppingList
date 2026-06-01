@@ -40,7 +40,21 @@
     "register": "Register",
     "enter_invite_code": "Enter invite code",
     "email_placeholder": "you@example.com",
-    "password_placeholder": "••••••••"
+    "password_placeholder": "••••••••",
+    "forgot_password": "Forgot Password?",
+    "forgot_password_instructions": "Enter your email address and we'll send you a link to reset your password.",
+    "send_reset_link": "Send Reset Link",
+    "sending_reset_link": "Sending...",
+    "reset_email_sent": "Check your email for a link to reset your password. If it doesn't appear within a few minutes, check your spam folder.",
+    "back_to_login": "Back to Login",
+    "reset_password": "Reset Password",
+    "reset_password_instructions": "Enter your new password below.",
+    "new_password": "New Password",
+    "confirm_password_placeholder": "Confirm new password",
+    "reset_password_button": "Reset Password",
+    "resetting_password": "Resetting...",
+    "password_reset_success": "Your password has been reset successfully! Redirecting to login...",
+    "redirecting_to_login": "Go to Login"
   },
   "list": {
     "my_shopping_lists": "My Shopping Lists",
@@ -122,7 +136,10 @@
     "only_owner_can_generate_share_code": "Only the list owner can generate a share code",
     "an_error_occurred_during_registration": "An error occurred during registration",
     "failed_to_generate_share_link_api": "Failed to generate share link",
-    "item_name_exists": "An item with this name already exists in this list"
+    "item_name_exists": "An item with this name already exists in this list",
+    "failed_to_send_reset_email": "Failed to send reset email. Please try again.",
+    "failed_to_reset_password": "Failed to reset password. The link may have expired.",
+    "invalid_reset_token": "Invalid reset link. Please request a new one."
   },
   "toasts": {
     "connection_lost": "Connection lost. Please check your internet.",

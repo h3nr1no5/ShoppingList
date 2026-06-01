@@ -13,6 +13,8 @@ cd backend && bash stop.sh       # kills uvicorn
 cd frontend && bash run.sh       # installs deps + Vite dev server on :5173
 ```
 
+> **Password reset (hidden):** Password reset UI is hidden — not in working state yet. Planned for future implementation. Backend endpoints remain; tests are skipped via `@pytest.mark.skip`.
+
 ## Migration (quantity float + unit)
 ```bash
 bash backend/scripts/migrate_float_unit.sh   # ALTER TABLE for existing DB
@@ -63,6 +65,7 @@ cd frontend && npm run lint    # eslint
 - **Static files mounting checks for directory** — `main.py` checks if the static directory exists before mounting (allows running backend without built frontend in development).
 - **Quantity is now FLOAT** — `ListItem.quantity` is `Float` (was `Integer`). Frontend uses `parseFloat`. Range: 0.1–9999. Backward compatible — integer values still accepted.
 - **Items have a unit field** — `ListItem.unit` (VARCHAR(20), default `"pcs"`). Display: `{quantity} {unit}` when unit is set (e.g. `2 kg`, `1 pcs`). Falls back to `x{quantity}` when unit is empty.
+- **Password reset UI is hidden** — Not in working state yet. Planned for future implementation. Backend endpoints and tests remain in place (skipped via `@pytest.mark.skip`).
 
 ## Architecture
 
@@ -76,6 +79,10 @@ cd frontend && npm run lint    # eslint
 - CORS configurable via `ALLOWED_ORIGINS` (comma-separated, defaults to `http://localhost:5173`)
 - `database.py` detects Azure URLs by checking for `azure` or `cloudapp` in connection string → enables SSL
 - Frontend calls `/api/*` directly (same-origin); no separate API URL needed in production
+
+### Password Reset (Planned)
+
+Password reset UI is hidden — not in working state yet. Backend endpoints, auth code, and tests remain in place (skipped via `@pytest.mark.skip`) for future re-enabling. To restore: uncomment route definitions in `frontend/src/App.tsx`, the "Forgot Password?" link in `frontend/src/pages/Login.tsx`, and remove the `@pytest.mark.skip` decorators from the three test classes. |
 
 ## Azure Deployment
 
@@ -125,7 +132,7 @@ azd provision
 - `Dockerfile` — root multi-stage build (Node build → Python runtime)
 - `backend/main.py` — FastAPI app entry point, routes, and static file mounting
 - `backend/models.py` — SQLAlchemy models (User, ShoppingList, ListItem)
-- `backend/auth.py` — JWT + password hashing
+- `backend/auth.py` — JWT + password hashing, plus `create_password_reset_token()` and `verify_password_reset_token()` for password reset JWT handling
 - `backend/crud.py` — database operations
 - `backend/database.py` — async engine + session setup
 - `backend/smoke_test.py` — post-deployment smoke tests
@@ -141,3 +148,44 @@ azd provision
 - `infra/main.bicep` — Azure infrastructure (single container app)
 - `backend/scripts/migrate_float_unit.sh` — DB migration for float quantity + unit column
 - `backend/scripts/e2e_db_clean.sh` — drops and recreates the `shoppinglist_e2e` database
+
+## Render Deployment
+
+Staging deployments happen on Render after merging to `dev`.
+
+### CI/CD Setup
+
+`.github/workflows/deploy-render.yml` triggers on push to `dev` (with path filters) or via `workflow_dispatch`:
+1. Builds Docker image → pushes to `ghcr.io` tagged `:dev` and `:dev-<sha>`
+2. Triggers Render deploy (empty body — service pulled from its configured `:dev` tag)
+3. Polls until deploy is live (up to 15 minutes)
+4. Runs smoke tests (Python)
+
+### Prerequisites (Render Dashboard)
+
+1. **Create API key** — Account Settings → API Keys → Create
+2. **Create Web Service** — New Web Service → tab "Existing Image"
+   - Image URL: `ghcr.io/h3nr1no5/shoppinglist:dev`
+   - Registry credential: GitHub username + `GHCR_PAT` as password
+   - Port: `8000`
+   - Add env vars: `SECRET_KEY`, `DATABASE_URL`, `REGISTRATION_KEY`, `RESEND_API_KEY`
+3. **Deploy once** to create the service
+4. **Copy service ID** from dashboard URL (`/services/srv-xxxxx`)
+5. **Copy app URL** — `https://your-app.onrender.com`
+
+### GitHub Secrets
+
+| Secret | Source |
+|--------|--------|
+| `RENDER_API_KEY` | Render Account Settings → API Keys |
+| `RENDER_SERVICE_ID` | Render dashboard URL (`srv-xxxxx`) |
+| `RENDER_APP_URL` (variable) | Staging app URL, e.g. `https://shoppinglist-staging.onrender.com` |
+
+### Notes
+
+- The service is **image-backed** (not Git-backed) — deploys are triggered via the API from CI/CD.
+- Render autodeploy is disabled — deploys are triggered exclusively via the CI/CD pipeline.
+- The `:dev` tag is **mutable** and overwritten on each push. An immutable `:dev-<sha>` tag is also pushed for traceability and manual rollback.
+- **Rollback:** In Render Dashboard → Service → change Image URL tag to a previous `:dev-<sha>` value.
+- **Manual deploy:** Trigger via `workflow_dispatch` in GitHub Actions, or push to `dev` with relevant file changes.
+- **Credentials:** The service's Registry Credential must use a `GHCR_PAT` with `read:packages` scope to pull from ghcr.io.

@@ -36,6 +36,13 @@ param secretKey string
 @secure()
 param registrationKey string
 
+@description('RESEND_API_KEY for sending password reset emails')
+@secure()
+param resendApiKey string
+
+@description('FROM_EMAIL address for password reset emails')
+param fromEmail string = 'noreply@shoppinglist.app'
+
 // Container Apps Environment
 resource containerAppsEnv 'Microsoft.App/managedEnvironments@2022-03-01' = {
   name: '${envName}-env'
@@ -100,6 +107,14 @@ resource app 'Microsoft.App/containerApps@2023-05-01' = {
             {
               name: 'STATIC_DIR'
               value: 'static'
+            }
+            {
+              name: 'RESEND_API_KEY'
+              value: resendApiKey
+            }
+            {
+              name: 'FROM_EMAIL'
+              value: fromEmail
             }
           ]
           probes: [
@@ -167,7 +182,8 @@ resource postgresServer 'Microsoft.DBforPostgreSQL/flexibleServers@2023-03-01-pr
 
 // PostgreSQL firewall rule to allow Azure services
 resource postgresFirewallRule 'Microsoft.DBforPostgreSQL/flexibleServers/firewallRules@2023-03-01-preview' = {
-  name: '${envName}-postgres/AllowAzureServices'
+  parent: postgresServer
+  name: 'AllowAzureServices'
   properties: {
     startIpAddress: '0.0.0.0'
     endIpAddress: '0.0.0.0'

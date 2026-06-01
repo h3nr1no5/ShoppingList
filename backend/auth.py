@@ -3,6 +3,7 @@ from __future__ import annotations
 Authentication logic including JWT token handling and password hashing.
 """
 
+import logging
 import os
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -32,6 +33,10 @@ if not SECRET_KEY:
     )
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
+RESET_TOKEN_EXPIRE_MINUTES = int(os.getenv("RESET_TOKEN_EXPIRE_MINUTES", "15"))
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -120,4 +125,34 @@ async def get_current_user_optional(
     try:
         return await get_current_user(token, db)
     except HTTPException:
+        return None
+
+
+# ==================== Password Reset Token ====================
+
+
+def create_password_reset_token(email: str) -> str:
+    """Create a short-lived JWT for password reset (15 min default)."""
+    expire = datetime.now(timezone.utc) + timedelta(minutes=RESET_TOKEN_EXPIRE_MINUTES)
+    to_encode = {
+        "sub": email,
+        "exp": expire,
+        "purpose": "password_reset",
+    }
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+
+def verify_password_reset_token(token: str) -> Optional[str]:
+    """Verify a password reset token and return the email if valid.
+    Returns None if token is invalid or expired.
+    """
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        if payload.get("purpose") != "password_reset":
+            return None
+        email: str = payload.get("sub")
+        if not email:
+            return None
+        return email
+    except JWTError:
         return None

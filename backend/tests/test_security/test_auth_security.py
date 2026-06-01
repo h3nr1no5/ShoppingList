@@ -194,3 +194,82 @@ class TestTokenExpiry:
         expected_expiry = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
         # Allow 5 second tolerance for test execution time
         assert abs((expiry - expected_expiry).total_seconds()) < 5
+
+
+@pytest.mark.skip(reason="Password reset is hidden — not in working state yet")
+@pytest.mark.security
+@pytest.mark.postgresql
+class TestPasswordResetSecurity:
+    """Security tests for password reset functionality."""
+
+    async def test_forgot_password_no_email_enumeration(self, client: AsyncClient, test_user, monkeypatch):
+        """Both existing and non-existing emails should return identical response body."""
+        import main as app_module
+
+        # Disable rate limiting for this test to avoid interference from
+        # previous tests that consumed the rate limit budget (3/minute)
+        monkeypatch.setattr(app_module.limiter, "enabled", False)
+
+        # Request for existing user
+        response_existing = await client.post(
+            "/api/auth/forgot-password",
+            json={"email": test_user.email},
+        )
+        # Request for non-existing user
+        response_nonexisting = await client.post(
+            "/api/auth/forgot-password",
+            json={"email": "nonexistent@example.com"},
+        )
+
+        assert response_existing.status_code == 200
+        assert response_nonexisting.status_code == 200
+        assert response_existing.json() == response_nonexisting.json()
+
+    async def test_forgot_password_rate_limiting(self, client: AsyncClient):
+        """Rapid forgot-password requests should eventually hit rate limit."""
+        import os
+        ratelimit_enabled = os.getenv("RATELIMIT_ENABLED", "true").lower() != "false"
+        if not ratelimit_enabled:
+            pytest.skip("Rate limiting is disabled")
+
+        # Send requests rapidly — rate limit is 3/minute
+        responses = []
+        for i in range(5):
+            response = await client.post(
+                "/api/auth/forgot-password",
+                json={"email": f"user{i}@example.com"},
+            )
+            responses.append(response.status_code)
+
+        # At least one request should be rate-limited
+        assert 429 in responses, f"Expected at least one 429 in {responses}"
+
+    async def test_reset_password_rate_limiting(self, client: AsyncClient):
+        """Rapid reset-password requests should eventually hit rate limit."""
+        import os
+        ratelimit_enabled = os.getenv("RATELIMIT_ENABLED", "true").lower() != "false"
+        if not ratelimit_enabled:
+            pytest.skip("Rate limiting is disabled")
+
+        from datetime import datetime, timedelta, timezone
+        from jose import jwt
+        from auth import SECRET_KEY, ALGORITHM
+
+        # Send requests rapidly — rate limit is 5/minute
+        responses = []
+        for i in range(7):
+            future_expire = datetime.now(timezone.utc) + timedelta(minutes=15)
+            payload = {
+                "sub": f"user{i}@example.com",
+                "exp": future_expire,
+                "purpose": "password_reset",
+            }
+            token = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+            response = await client.post(
+                "/api/auth/reset-password",
+                json={"token": token, "password": "NewPassword123!"},
+            )
+            responses.append(response.status_code)
+
+        # At least one request should be rate-limited
+        assert 429 in responses, f"Expected at least one 429 in {responses}"

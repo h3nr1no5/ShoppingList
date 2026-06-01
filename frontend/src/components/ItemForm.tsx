@@ -1,18 +1,12 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { UNIT_OPTIONS } from '../constants';
+import { clampQuantity } from '../utils/quantity';
 
 interface ItemFormProps {
   onSubmit: (name: string, quantity: number, unit: string) => void;
   onCancel?: () => void;
 }
-
-const clampQuantity = (value: string): number => {
-  const parsed = parseFloat(value);
-  if (isNaN(parsed) || parsed < 0.1) return 1;
-  if (parsed > 9999) return 9999;
-  return parsed;
-};
 
 const ItemForm: React.FC<ItemFormProps> = ({ onSubmit, onCancel }) => {
   const { t } = useTranslation();
@@ -49,7 +43,10 @@ const ItemForm: React.FC<ItemFormProps> = ({ onSubmit, onCancel }) => {
           max="9999"
           value={quantityInput}
           onChange={(e) => setQuantityInput(e.target.value)}
-          onBlur={() => { if (!quantityInput || parseFloat(quantityInput) < 0.1) setQuantityInput("1"); }}
+          onBlur={() => {
+            const clamped = clampQuantity(quantityInput);
+            setQuantityInput(String(clamped));
+          }}
           className="form-input quantity-input"
           aria-label={t('item.quantity_aria')}
         />

@@ -1,0 +1,110 @@
+name: Render — Staging
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+      - 'Dockerfile'
+      - '.github/workflows/deploy-render.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: render-staging
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  deploy-staging:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Log in to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_PAT }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Set lowercase repository name
+        run: echo "REPOSITORY_LOWER=${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/${{ env.REPOSITORY_LOWER }}:dev
+            ghcr.io/${{ env.REPOSITORY_LOWER }}:dev-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Trigger Render deploy
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+        run: |
+          RESPONSE=$(curl -s --fail -X POST \
+            "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys" \
+            -H "Authorization: Bearer $RENDER_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d '{}')
+          DEPLOY_ID=$(echo "$RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
+          echo "DEPLOY_ID=$DEPLOY_ID" >> "$GITHUB_ENV"
+
+      - name: Wait for deploy to complete
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+        run: |
+          MAX_ATTEMPTS=90
+          ATTEMPT=0
+          while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+            DEPLOY=$(curl -s --fail \
+              "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys/$DEPLOY_ID" \
+              -H "Authorization: Bearer $RENDER_API_KEY")
+            STATUS=$(echo "$DEPLOY" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('status','unknown'))" 2>/dev/null || echo "error")
+            if [ "$STATUS" = "live" ]; then
+              echo "Deploy is live"
+              exit 0
+            elif [ "$STATUS" = "failed" ]; then
+              echo "ERROR: Deploy failed"
+              exit 1
+            fi
+            ATTEMPT=$((ATTEMPT + 1))
+            echo "Attempt $ATTEMPT/$MAX_ATTEMPTS: status=$STATUS, waiting..."
+            sleep 10
+          done
+          echo "ERROR: Deploy did not complete within $((MAX_ATTEMPTS * 10)) seconds"
+          exit 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Run smoke tests
+        env:
+          SMOKE_BASE_URL: "${{ vars.RENDER_APP_URL }}"
+          SMOKE_REGISTRATION_KEY: "${{ secrets.REGISTRATION_KEY }}"
+        run: |
+          for i in 1 2 3; do
+            if python backend/smoke_test.py; then
+              echo "Smoke tests passed"
+              exit 0
+            fi
+            echo "Smoke test attempt $i failed, retrying in 15s..."
+            sleep 15
+          done
+          echo "Smoke tests failed after 3 attempts"
+          exit 1

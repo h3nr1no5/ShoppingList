@@ -6,6 +6,7 @@ import type { TFunction } from 'i18next';
 import Swipeable from './Swipeable';
 import ConfirmDialog from './ConfirmDialog';
 import { UNIT_OPTIONS } from '../constants';
+import { clampQuantity } from '../utils/quantity';
 const VALID_UNITS = new Set<string>(UNIT_OPTIONS);
 const coerceUnit = (u: string): string => VALID_UNITS.has(u) ? u : "pcs";
 
@@ -29,18 +30,6 @@ function formatRelativeTime(dateString: string, t: TFunction): string {
   // Older: show short date like "Jan 4"
   return date.toLocaleDateString(i18n.language, { month: 'short', day: 'numeric' });
 }
-
-/**
- * Clamps a quantity string to valid range [1, 9999].
- * Invalid input (non-numeric, negative, etc.) returns 1.
- * Values above 9999 are clamped to 9999.
- */
-const clampQuantity = (value: string): number => {
-  const parsed = parseFloat(value);
-  if (isNaN(parsed) || parsed < 0.1) return 1;
-  if (parsed > 9999) return 9999;
-  return parsed;
-};
 
 interface ListItemProps {
   item: ListItemType;
@@ -129,7 +118,7 @@ const ListItem: React.FC<ListItemProps> = ({ item, onToggle, onDelete, onEdit })
             {item.name}
           </span>
           {item.unit ? (
-            <span className="item-quantity">{item.quantity} {item.unit}</span>
+            <span className="item-quantity">{item.quantity} {t(`unit.${item.unit as typeof UNIT_OPTIONS[number]}`)}</span>
           ) : item.quantity > 1 && (
             <span className="item-quantity">x{item.quantity}</span>
           )}

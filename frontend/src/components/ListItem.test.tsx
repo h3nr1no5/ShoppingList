@@ -488,4 +488,38 @@ describe('ListItem', () => {
       expect(screen.getByTitle('Save changes')).toBeInTheDocument();
     });
   });
+
+  describe('Comma as decimal separator in edit', () => {
+    it('calls onEdit with correct float when quantity uses comma', () => {
+      const onEdit = vi.fn();
+      const mockItem = createMockItem({ id: 'item-1', name: 'Milk', quantity: 1 });
+      render(<ListItem item={mockItem} onToggle={vi.fn()} onDelete={vi.fn()} onEdit={onEdit} />);
+
+      // Enter edit mode
+      fireEvent.click(screen.getByTitle('Edit item'));
+
+      // Change quantity using comma
+      const quantityInput = screen.getByDisplayValue(1);
+      fireEvent.change(quantityInput, { target: { value: '2,5' } });
+
+      // Click save
+      fireEvent.click(screen.getByTitle('Save changes'));
+
+      expect(onEdit).toHaveBeenCalledWith('item-1', 'Milk', 2.5, 'pcs');
+    });
+
+    it('blur normalizes comma to period in edit mode', () => {
+      const mockItem = createMockItem({ id: 'item-1', name: 'Milk', quantity: 1 });
+      render(<ListItem item={mockItem} onToggle={vi.fn()} onDelete={vi.fn()} onEdit={vi.fn()} />);
+
+      // Enter edit mode
+      fireEvent.click(screen.getByTitle('Edit item'));
+
+      const quantityInput = screen.getByDisplayValue(1);
+      fireEvent.change(quantityInput, { target: { value: '4,5' } });
+      fireEvent.blur(quantityInput);
+
+      expect(quantityInput).toHaveValue('4.5');
+    });
+  });
 });
