@@ -2,7 +2,7 @@
 #
 # migrate_float_unit.sh
 #
-# Migration: Change list_items.quantity from INTEGER to DOUBLE PRECISION,
+# Migration: Backup list_items, then change quantity from INTEGER to DOUBLE PRECISION,
 #            and add list_items.unit VARCHAR(20) with default 'pcs'.
 #
 # Idempotent: safe to run multiple times. Each SQL statement uses
@@ -166,7 +166,18 @@ else
   }
 fi
 
-# ── Step 2: ALTER COLUMN quantity → DOUBLE PRECISION ───────────────────────
+# ── Step 1: Backup existing list_items ──────────────────────────────────────
+echo ""
+echo "➤ Creating pre-migration backup of list_items..."
+
+PSQL "
+  CREATE TABLE IF NOT EXISTS list_items_backup_20260526 AS
+  SELECT * FROM list_items
+"
+
+echo "  ✔ Done."
+
+# ── Step 3: ALTER COLUMN quantity → DOUBLE PRECISION ───────────────────────
 echo ""
 echo "➤ Migrating list_items.quantity to DOUBLE PRECISION…"
 
@@ -190,7 +201,7 @@ END \$\$;
 
 echo "  ✔ Done."
 
-# ── Step 3: ADD COLUMN unit (if not exists) ─────────────────────────────────
+# ── Step 4: ADD COLUMN unit (if not exists) ─────────────────────────────────
 echo ""
 echo "➤ Adding list_items.unit VARCHAR(20) DEFAULT 'pcs'…"
 
@@ -198,6 +209,12 @@ PSQL "
   ALTER TABLE list_items ADD COLUMN IF NOT EXISTS unit VARCHAR(20) NOT NULL DEFAULT 'pcs';
 "
 
+echo "  ✔ Done."
+
+# ── Step 5: Cleanup backup table (keep only for migration window) ────────────
+echo ""
+echo "➤ Cleaning up backup table..."
+PSQL "DROP TABLE IF EXISTS list_items_backup_20260526;"
 echo "  ✔ Done."
 
 # ── Done ────────────────────────────────────────────────────────────────────
