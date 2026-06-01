@@ -151,22 +151,21 @@ azd provision
 
 ## Render Deployment
 
-Preview/staging deployments happen on Render for PRs targeting `dev`.
+Staging deployments happen on Render after merging to `dev`.
 
 ### CI/CD Setup
 
-`.github/workflows/deploy-render.yml` triggers on PRs to `dev`:
-1. Tests (backend pytest + frontend lint/build/test)
-2. Builds Docker image → pushes to `ghcr.io` tagged `pr-<number>`
-3. Triggers Render deploy via `POST /v1/services/{serviceId}/deploys`
-4. Polls until deploy is live (up to 15 minutes)
-5. Runs smoke tests (Python) + Playwright E2E against staging
+`.github/workflows/deploy-render.yml` triggers on push to `dev` (with path filters) or via `workflow_dispatch`:
+1. Builds Docker image → pushes to `ghcr.io` tagged `:dev` and `:dev-<sha>`
+2. Triggers Render deploy (empty body — service pulled from its configured `:dev` tag)
+3. Polls until deploy is live (up to 15 minutes)
+4. Runs smoke tests (Python)
 
 ### Prerequisites (Render Dashboard)
 
 1. **Create API key** — Account Settings → API Keys → Create
 2. **Create Web Service** — New Web Service → tab "Existing Image"
-   - Image URL: `ghcr.io/h3nr1no5/shoppinglist`
+   - Image URL: `ghcr.io/h3nr1no5/shoppinglist:dev`
    - Registry credential: GitHub username + `GHCR_PAT` as password
    - Port: `8000`
    - Add env vars: `SECRET_KEY`, `DATABASE_URL`, `REGISTRATION_KEY`, `RESEND_API_KEY`
@@ -184,7 +183,9 @@ Preview/staging deployments happen on Render for PRs targeting `dev`.
 
 ### Notes
 
-- The service must be **image-backed** (not Git-backed) for the `imageUrl` API parameter to work.
-- The `imageUrl` host/repo/name must match the service's configured image.
-- Render autodeploy is disabled — deploys are triggered exclusively via the API from CI/CD.
-- Deploy hook (simple `curl` to a Render-generated URL) is an alternative but the API approach was chosen for consistency with existing Azure workflows.
+- The service is **image-backed** (not Git-backed) — deploys are triggered via the API from CI/CD.
+- Render autodeploy is disabled — deploys are triggered exclusively via the CI/CD pipeline.
+- The `:dev` tag is **mutable** and overwritten on each push. An immutable `:dev-<sha>` tag is also pushed for traceability and manual rollback.
+- **Rollback:** In Render Dashboard → Service → change Image URL tag to a previous `:dev-<sha>` value.
+- **Manual deploy:** Trigger via `workflow_dispatch` in GitHub Actions, or push to `dev` with relevant file changes.
+- **Credentials:** The service's Registry Credential must use a `GHCR_PAT` with `read:packages` scope to pull from ghcr.io.
