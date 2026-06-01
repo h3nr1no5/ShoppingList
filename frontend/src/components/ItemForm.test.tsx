@@ -111,4 +111,31 @@ describe('ItemForm', () => {
       expect(onSubmit).toHaveBeenCalledWith('Test', 1, 'pcs');
     });
   });
+
+  describe('Comma as decimal separator', () => {
+    it('accepts comma as decimal separator in quantity', () => {
+      const onSubmit = vi.fn();
+      render(<ItemForm onSubmit={onSubmit} />);
+
+      fireEvent.change(screen.getByPlaceholderText('Add new item...'), {
+        target: { value: 'Test' },
+      });
+      fireEvent.change(screen.getByLabelText('Quantity'), {
+        target: { value: '2,5' },
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: /add/i }));
+      expect(onSubmit).toHaveBeenCalledWith('Test', 2.5, 'pcs');
+    });
+
+    it('blur normalizes comma to period display', () => {
+      render(<ItemForm onSubmit={vi.fn()} />);
+
+      const quantityInput = screen.getByLabelText('Quantity');
+      fireEvent.change(quantityInput, { target: { value: '3,5' } });
+      fireEvent.blur(quantityInput);
+
+      expect(quantityInput).toHaveValue('3.5');
+    });
+  });
 });
