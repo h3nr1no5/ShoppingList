@@ -151,21 +151,29 @@ azd provision
 
 ## Render Deployment
 
-Staging deployments happen on Render after merging to `dev`.
+Deployments happen on Render for both staging (`dev`) and production (`main`).
 
 ### CI/CD Setup
 
-`.github/workflows/deploy-render.yml` triggers on push to `dev` (with path filters) or via `workflow_dispatch`:
-1. Builds Docker image → pushes to `ghcr.io` tagged `:dev` and `:dev-<sha>`
+**Staging** (`.github/workflows/deploy-render-staging.yml`) — triggers on push to `dev` (with path filters) or via `workflow_dispatch`:
+1. Builds Docker image → scans with Trivy (CRITICAL/HIGH) → pushes to `ghcr.io` tagged `:dev` and `:dev-<sha>`
 2. Triggers Render deploy (empty body — service pulled from its configured `:dev` tag)
 3. Polls until deploy is live (up to 15 minutes)
 4. Runs smoke tests (Python)
+
+**Production** (`.github/workflows/deploy-render-production.yml`) — triggers on push to `main` (with path filters) or via `workflow_dispatch`:
+1. Captures current live deploy ID for rollback
+2. Builds Docker image → scans with Trivy (CRITICAL/HIGH) → pushes to `ghcr.io` tagged `:main` and `:main-<sha>`
+3. Triggers Render deploy
+4. Polls until deploy is live (up to 15 minutes)
+5. Runs smoke tests (Python)
+6. Rolls back to previous deploy on failure
 
 ### Prerequisites (Render Dashboard)
 
 1. **Create API key** — Account Settings → API Keys → Create
 2. **Create Web Service** — New Web Service → tab "Existing Image"
-   - Image URL: `ghcr.io/h3nr1no5/shoppinglist:dev`
+   - Image URL: `ghcr.io/h3nr1no5/shoppinglist:dev` (staging) or `:main` (production)
    - Registry credential: GitHub username + `GHCR_PAT` as password
    - Port: `8000`
    - Add env vars: `SECRET_KEY`, `DATABASE_URL`, `REGISTRATION_KEY`, `RESEND_API_KEY`
@@ -175,17 +183,19 @@ Staging deployments happen on Render after merging to `dev`.
 
 ### GitHub Secrets
 
-| Secret | Source |
-|--------|--------|
+| Secret / Variable | Source |
+|-------------------|--------|
 | `RENDER_API_KEY` | Render Account Settings → API Keys |
-| `RENDER_SERVICE_ID` | Render dashboard URL (`srv-xxxxx`) |
+| `RENDER_SERVICE_ID` | Staging service ID (`srv-xxxxx`) |
+| `RENDER_SERVICE_ID_PROD` | Production service ID (`srv-xxxxx`) |
 | `RENDER_APP_URL` (variable) | Staging app URL, e.g. `https://shoppinglist-staging.onrender.com` |
+| `RENDER_APP_URL_PROD` (variable) | Production app URL, e.g. `https://shoppinglist.onrender.com` |
 
 ### Notes
 
-- The service is **image-backed** (not Git-backed) — deploys are triggered via the API from CI/CD.
+- Services are **image-backed** (not Git-backed) — deploys are triggered via the API from CI/CD.
 - Render autodeploy is disabled — deploys are triggered exclusively via the CI/CD pipeline.
-- The `:dev` tag is **mutable** and overwritten on each push. An immutable `:dev-<sha>` tag is also pushed for traceability and manual rollback.
-- **Rollback:** In Render Dashboard → Service → change Image URL tag to a previous `:dev-<sha>` value.
-- **Manual deploy:** Trigger via `workflow_dispatch` in GitHub Actions, or push to `dev` with relevant file changes.
+- The `:dev` and `:main` tags are **mutable** and overwritten on each push. Immutable `:dev-<sha>` and `:main-<sha>` tags are also pushed for traceability and manual rollback.
+- **Rollback:** In Render Dashboard → Service → change Image URL tag to a previous `<sha>` value.
+- **Manual deploy:** Trigger via `workflow_dispatch` in GitHub Actions, or push to the relevant branch with file changes.
 - **Credentials:** The service's Registry Credential must use a `GHCR_PAT` with `read:packages` scope to pull from ghcr.io.
