@@ -46,19 +46,35 @@ jobs:
           PREV=$(curl -s --fail \
             "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys?limit=1&status=live" \
             -H "Authorization: Bearer $RENDER_API_KEY" | \
-            python3 -c "import sys,json; print(json.load(sys.stdin)[0]['id'])")
+            python3 -c "import sys,json; print(json.load(sys.stdin)[0]['deploy']['id'])")
           echo "PREV_DEPLOY_ID=$PREV" >> "$GITHUB_ENV"
 
-      - name: Build and push Docker image
+      - name: Build Docker image
         uses: docker/build-push-action@v6
         with:
           context: .
-          push: true
-          tags: |
-            ghcr.io/${{ env.REPOSITORY_LOWER }}:main
-            ghcr.io/${{ env.REPOSITORY_LOWER }}:main-${{ github.sha }}
+          load: true
+          push: false
+          tags: ghcr.io/${{ env.REPOSITORY_LOWER }}:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Scan image with Trivy
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ghcr.io/${{ env.REPOSITORY_LOWER }}:${{ github.sha }}
+          severity: CRITICAL,HIGH
+          exit-code: "1"
+          ignore-unfixed: true
+          format: table
+
+      - name: Push Docker image
+        run: |
+          docker tag ghcr.io/${{ env.REPOSITORY_LOWER }}:${{ github.sha }} ghcr.io/${{ env.REPOSITORY_LOWER }}:main
+          docker tag ghcr.io/${{ env.REPOSITORY_LOWER }}:${{ github.sha }} ghcr.io/${{ env.REPOSITORY_LOWER }}:main-${{ github.sha }}
+          docker push ghcr.io/${{ env.REPOSITORY_LOWER }}:${{ github.sha }}
+          docker push ghcr.io/${{ env.REPOSITORY_LOWER }}:main
+          docker push ghcr.io/${{ env.REPOSITORY_LOWER }}:main-${{ github.sha }}
 
       - name: Trigger Render deploy
         env:
