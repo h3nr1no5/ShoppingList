@@ -342,22 +342,40 @@ def test_access_items_via_share_code(base_url: str, list_id: str, share_code: st
         check("found 'Smoke Test Item'", match, str(items))
 
 
-def cleanup(base_url: str, token: str, list_id: Optional[str]) -> None:
-    """Clean up: delete the test list (best-effort, don't fail on error)."""
-    if not list_id or not token:
+def cleanup(base_url: str, token: str, list_id: Optional[str], password: Optional[str] = None) -> None:
+    """Clean up: delete list first (needs valid token), then user account."""
+    if not token:
         return
     print("\n[11/11] Cleanup")
-    try:
-        req = urllib.request.Request(
-            f"{base_url}/api/lists/{list_id}",
-            method="DELETE",
-            headers={"Authorization": f"Bearer {token}"},
-        )
-        with urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT) as resp:
-            print(f"  PASS [cleanup] List {list_id} deleted (HTTP {resp.status})")
-    except Exception as e:
-        # Cleanup failures don't fail the overall test
-        print(f"  INFO [cleanup] Could not delete list {list_id}: {e}")
+
+    if list_id:
+        try:
+            req = urllib.request.Request(
+                f"{base_url}/api/lists/{list_id}",
+                method="DELETE",
+                headers={"Authorization": f"Bearer {token}"},
+            )
+            with urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT) as resp:
+                print(f"  PASS [cleanup] List {list_id} deleted (HTTP {resp.status})")
+        except Exception as e:
+            print(f"  INFO [cleanup] Could not delete list {list_id}: {e}")
+
+    if password:
+        try:
+            data = json.dumps({"password": password}).encode("utf-8")
+            req = urllib.request.Request(
+                f"{base_url}/api/auth/me",
+                data=data,
+                method="DELETE",
+                headers={
+                    "Authorization": f"Bearer {token}",
+                    "Content-Type": "application/json",
+                },
+            )
+            with urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT) as resp:
+                print(f"  PASS [cleanup] User deleted (HTTP {resp.status})")
+        except Exception as e:
+            print(f"  INFO [cleanup] Could not delete user: {e}")
 
 
 # ---------------------------------------------------------------------------
@@ -419,7 +437,7 @@ def main() -> int:
     else:
         print("\n  SKIP [5-11/11] Skipping API tests (login failed)")
 
-    cleanup(base_url, token, list_id)
+    cleanup(base_url, token, list_id, password)
 
     print()
     if FAILED:

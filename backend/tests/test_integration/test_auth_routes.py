@@ -247,3 +247,83 @@ class TestResetPassword:
         assert response.status_code == 400
         data = response.json()
         assert "Invalid or expired reset token" in data["detail"]
+
+
+@pytest.mark.integration
+@pytest.mark.postgresql
+class TestDeleteAccount:
+    """Tests for DELETE /api/auth/me."""
+
+    async def test_delete_account_success(self, client: AsyncClient, test_user_token):
+        """Authenticated user should be able to delete their account with correct password."""
+        response = await client.request(
+            "DELETE",
+            "/api/auth/me",
+            json={"password": "TestPassword123!"},
+            headers={"Authorization": f"Bearer {test_user_token}"},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["message"] == "Account deleted successfully"
+
+    async def test_delete_account_no_auth(self, client: AsyncClient):
+        """Unauthenticated request should return 401."""
+        response = await client.delete("/api/auth/me")
+        assert response.status_code == 401
+
+    async def test_delete_account_wrong_password(self, client: AsyncClient, test_user_token):
+        """Deleting account with wrong password should return 401."""
+        response = await client.request(
+            "DELETE",
+            "/api/auth/me",
+            json={"password": "WrongPassword"},
+            headers={"Authorization": f"Bearer {test_user_token}"},
+        )
+        assert response.status_code == 401
+        data = response.json()
+        assert "detail" in data
+
+    async def test_delete_account_then_login_fails(self, client: AsyncClient, test_user_token):
+        """After deletion, the user's token should no longer be valid."""
+        # Delete account
+        response = await client.request(
+            "DELETE",
+            "/api/auth/me",
+            json={"password": "TestPassword123!"},
+            headers={"Authorization": f"Bearer {test_user_token}"},
+        )
+        assert response.status_code == 200
+
+        # Try to access an endpoint — should fail
+        response = await client.get(
+            "/api/lists",
+            headers={"Authorization": f"Bearer {test_user_token}"},
+        )
+        assert response.status_code == 401
+
+    async def test_delete_account_cascades_to_lists(
+        self, client: AsyncClient, test_user_token
+    ):
+        """Deleting the user should cascade-delete owned lists."""
+        # Create a list owned by the test user
+        resp = await client.post(
+            "/api/lists",
+            json={"name": "Cascade Test List"},
+            headers={"Authorization": f"Bearer {test_user_token}"},
+        )
+        assert resp.status_code in (200, 201)
+        list_id = resp.json()["id"]
+
+        # Delete the account
+        resp = await client.request(
+            "DELETE",
+            "/api/auth/me",
+            json={"password": "TestPassword123!"},
+            headers={"Authorization": f"Bearer {test_user_token}"},
+        )
+        assert resp.status_code == 200
+
+        # Verify the list is cascade-deleted — should return 404 (not found)
+        # rather than 401 (exists but no access)
+        resp = await client.get(f"/api/lists/{list_id}")
+        assert resp.status_code == 404

@@ -91,6 +91,14 @@ async def update_password(db: AsyncSession, email: str, new_password_hash: str) 
     return True
 
 
+async def delete_user(db: AsyncSession, user: User) -> None:
+    """
+    Delete a user and cascade-delete all owned shopping lists and items.
+    """
+    await db.delete(user)
+    await db.commit()
+
+
 # ==================== Shopping List CRUD ====================
 
 
