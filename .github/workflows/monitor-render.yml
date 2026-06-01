@@ -18,16 +18,18 @@ jobs:
           BASE_URL: ${{ vars.RENDER_APP_URL_PROD }}
         run: |
           URL="$BASE_URL/health"
-          MAX_ATTEMPTS=4
+          MAX_ATTEMPTS=3
           DELAY=15
 
           # Retry loop: up to MAX_ATTEMPTS attempts with DELAY seconds between each
           for i in $(seq 1 $MAX_ATTEMPTS); do
             echo "Attempt $i of $MAX_ATTEMPTS — curling $URL"
 
-            # Capture both the HTTP status code and the response body
-            BODY=$(curl -s --max-time 10 "$URL")
-            STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$URL")
+            # Single curl call for both body + status code
+            # || true prevents bash -e from aborting on timeout (exit 28)
+            HTTP_RESPONSE=$(curl -s --max-time 60 -w "\n%{http_code}" "$URL") || true
+            BODY=$(echo "$HTTP_RESPONSE" | head -n -1)
+            STATUS_CODE=$(echo "$HTTP_RESPONSE" | tail -n 1)
 
             if [ "$STATUS_CODE" = "200" ]; then
               echo "PASS — HTTP $STATUS_CODE"
