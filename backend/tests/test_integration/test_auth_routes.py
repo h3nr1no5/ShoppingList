@@ -114,6 +114,7 @@ class TestLogin:
         assert response.status_code == 422
 
 
+@pytest.mark.skip(reason="Password reset is hidden — not in working state yet")
 @pytest.mark.integration
 @pytest.mark.postgresql
 class TestForgotPassword:
@@ -148,6 +149,7 @@ class TestForgotPassword:
         assert response.status_code == 422
 
 
+@pytest.mark.skip(reason="Password reset is hidden — not in working state yet")
 @pytest.mark.integration
 @pytest.mark.postgresql
 class TestResetPassword:

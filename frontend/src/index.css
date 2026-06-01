@@ -438,6 +438,12 @@ body {
   background-color: var(--bg-primary);
 }
 
+.unit-select,
+.edit-unit-select {
+  width: auto;
+  flex-shrink: 0;
+}
+
 /* List Items */
 .items-list {
   display: flex;
@@ -1229,6 +1235,10 @@ body {
   .quantity-input {
     flex: 0 0 auto !important;
     width: 60px !important;
+    order: 2;
+  }
+
+  .item-form-row .unit-select {
     order: 2;
   }
 
