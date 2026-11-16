@@ -1,15 +1,8 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { useApiHealth, type ApiHealthStatus } from '../hooks/useApiHealth';
+import { useApiHealth } from '../hooks/useApiHealth';
 import { useToastContext } from './useToastContext';
-
-export interface ApiHealthContextValue {
-  status: ApiHealthStatus;
-  isConnected: boolean;
-}
-
-const ApiHealthContext = React.createContext<ApiHealthContextValue | undefined>(undefined);
-export { ApiHealthContext };
+import { ApiHealthContext, type ApiHealthContextValue } from './ApiHealthContextType';
 
 export function ApiHealthProvider({ children }: { children: React.ReactNode }) {
   const { t } = useTranslation();

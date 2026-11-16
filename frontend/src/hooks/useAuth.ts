@@ -1,5 +1,5 @@
 import { useContext } from 'react';
-import { AuthContext } from '../context/AuthContext';
+import { AuthContext } from '../context/AuthContextType';
 import { type User, type LoginRequest, type RegisterRequest, type AuthResponse } from '../types';
 
 // Re-export types for convenience

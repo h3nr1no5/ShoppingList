@@ -1,5 +1,5 @@
 import React from 'react';
-import { ApiHealthContext, type ApiHealthContextValue } from './ApiHealthContext';
+import { ApiHealthContext, type ApiHealthContextValue } from './ApiHealthContextType';
 
 export function useApiHealthContext(): ApiHealthContextValue {
   const context = React.useContext(ApiHealthContext);

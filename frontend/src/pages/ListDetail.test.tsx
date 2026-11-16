@@ -3,11 +3,11 @@ import { vi, describe, it, expect, beforeEach, SpyInstance } from 'vitest';
 import { BrowserRouter } from 'react-router-dom';
 import ListDetail from './ListDetail';
 import { type ShoppingList } from '../types';
-import { AuthContext } from '../context/AuthContext';
-import { ThemeContext } from '../context/ThemeContext';
+import { AuthContext } from '../context/AuthContextType';
+import { ThemeContext } from '../context/ThemeContextType';
 import { ToastProvider } from '../context/ToastContext';
 import { useToastContext } from '../context/useToastContext';
-import { ApiHealthContext } from '../context/ApiHealthContext';
+import { ApiHealthContext } from '../context/ApiHealthContextType';
 import { ToastContainer } from '../components/ToastContainer';
 
 // Mock the apiClient

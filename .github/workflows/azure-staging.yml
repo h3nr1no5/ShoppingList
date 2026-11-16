@@ -37,7 +37,7 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
-          username: ${{ github.actor }}
+          username: ${{ github.repository_owner }}
           password: ${{ secrets.GHCR_PAT }}
 
       - name: Set up Docker Buildx
@@ -114,7 +114,7 @@ jobs:
             --image "ghcr.io/${{ env.REPOSITORY_LOWER }}:dev-${{ github.sha }}" \
             --cpu 1 --memory 1.5 \
             --registry-login-server ghcr.io \
-            --registry-username ${{ github.actor }} \
+            --registry-username ${{ github.repository_owner }} \
             --registry-password "$ACI_REGISTRY_PASSWORD" \
             --environment-variables \
               "SECRET_KEY=$ACI_SECRET_KEY" \
